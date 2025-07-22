@@ -9,11 +9,12 @@ import express, {
   notFound,
   errorHandler
 } from '@feathersjs/express'
+import 'dotenv/config';
 import configuration from '@feathersjs/configuration'
 import socketio from '@feathersjs/socketio'
 
 import type { Application } from './declarations'
-import { configurationValidator } from './configuration'
+import { configurationValidator, configAuthentication } from './configuration'
 import { logger } from './logger'
 import { logError } from './hooks/log-error'
 import { postgresql } from './postgresql'
@@ -31,6 +32,8 @@ app.use(urlencoded({ extended: true }))
 // Host the public folder
 app.use('/', serveStatic(app.get('public')))
 
+console.log('DATABASE_URL', process.env.DATABASE_URL)
+
 // Configure services and real-time functionality
 app.configure(rest())
 app.configure(
@@ -41,7 +44,9 @@ app.configure(
   })
 )
 app.configure(postgresql)
+app.set('authentication', configAuthentication)
 app.configure(authentication)
+
 app.configure(services)
 app.configure(channels)
 

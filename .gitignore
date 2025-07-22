@@ -119,6 +119,3 @@ dist
 .sqlite
 
 lib/
-
-# feathers configuration files
-config/default.json
