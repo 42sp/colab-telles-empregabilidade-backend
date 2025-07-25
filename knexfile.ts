@@ -1,7 +1,9 @@
 // For more information about this file see https://dove.feathersjs.com/guides/cli/databases.html
-import { configPostgres } from './src/configuration'
+import { configPostgres } from './src/configuration.ts'
 
 // Load our database connection info from the app configuration
 const config = configPostgres
 
-module.exports = config
+export default config
+
+

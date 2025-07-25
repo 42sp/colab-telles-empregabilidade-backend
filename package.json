@@ -7,7 +7,9 @@
   "keywords": [
     "feathers"
   ],
-  "author": {},
+  "author": {
+    "name": "42 São Paulo"
+  },
   "contributors": [],
   "bugs": {},
   "engines": {
@@ -42,10 +44,12 @@
     "mocha": "cross-env NODE_ENV=test mocha test/ --require ts-node/register --recursive --extension .ts --exit",
     "test": "cross-env NODE_ENV=test npm run migrate && npm run mocha",
     "bundle:client": "npm run compile && npm pack --pack-destination ./public",
-    "migrate": "knex migrate:latest",
-    "migrate:make": "knex migrate:make"
+    "migrate": "dotenvx run --env-file=.env -- knex migrate:latest",
+    "migrate:up": "dotenvx run --env-file=.env -- knex migrate:up",
+    "migrate:make": "dotenvx run -f .env -- knex migrate:make"
   },
   "dependencies": {
+    "@dotenvx/dotenvx": "^1.48.3",
     "@feathersjs/adapter-commons": "^5.0.34",
     "@feathersjs/authentication": "^5.0.34",
     "@feathersjs/authentication-client": "^5.0.34",

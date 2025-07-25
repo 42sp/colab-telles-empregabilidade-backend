@@ -1,7 +1,7 @@
 import { defaultAppSettings, getValidator } from '@feathersjs/schema'
 import type { FromSchema } from '@feathersjs/schema'
 
-import { dataValidator } from './validators'
+import { dataValidator } from './validators.ts'
 
 export const configurationSchema = {
   $id: 'configuration',
