@@ -52,6 +52,5 @@ export const createClient = <Configuration = any,>(
   client.configure(userClient)
   client.configure(studentsClient)
   client.configure(conversionsClient)
-  client.configure(conversionsClient)
   return client
 }

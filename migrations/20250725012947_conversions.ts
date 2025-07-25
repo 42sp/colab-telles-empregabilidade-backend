@@ -2,6 +2,8 @@
 import type { Knex } from 'knex'
 
 export async function up(knex: Knex): Promise<void> {
+	const exists = await knex.schema.hasTable('conversions');
+	if (exists) return;
   await knex.schema.createTable('conversions', table => {
     table.increments('id');
     table.string('conversionMonth');

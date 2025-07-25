@@ -2,11 +2,14 @@
 import type { Knex } from 'knex'
 
 export async function up(knex: Knex): Promise<void> {
-  await knex.schema.createTable('students', table => {
-    table.increments('id')
+	const exists = await knex.schema.hasTable('users');
+	if (!exists) {
+		await knex.schema.createTable('students', table => {
+			table.increments('id')
 
-    table.string('text')
-  })
+			table.string('text')
+		})
+	}
 }
 
 export async function down(knex: Knex): Promise<void> {

@@ -42,8 +42,9 @@
     "mocha": "cross-env NODE_ENV=test mocha test/ --require ts-node/register --recursive --extension .ts --exit",
     "test": "cross-env NODE_ENV=test npm run migrate && npm run mocha",
     "bundle:client": "npm run compile && npm pack --pack-destination ./public",
-    "migrate": "knex migrate:latest",
-    "migrate:make": "knex migrate:make"
+    "migrate:up": "knex migrate:latest",
+    "migrate:make": "knex migrate:make",
+		"migrate:down": "knex migrate:down"
   },
   "dependencies": {
     "@feathersjs/adapter-commons": "^5.0.34",
