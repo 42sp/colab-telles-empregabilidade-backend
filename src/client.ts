@@ -4,6 +4,14 @@ import type { TransportConnection, Application } from '@feathersjs/feathers'
 import authenticationClient from '@feathersjs/authentication-client'
 import type { AuthenticationClientOptions } from '@feathersjs/authentication-client'
 
+import { conversionsClient } from './services/conversions/conversions.shared'
+export type {
+  Conversions,
+  ConversionsData,
+  ConversionsQuery,
+  ConversionsPatch
+} from './services/conversions/conversions.shared'
+
 import { studentsClient } from './services/students/students.shared'
 export type {
   Students,
@@ -43,5 +51,7 @@ export const createClient = <Configuration = any,>(
 
   client.configure(userClient)
   client.configure(studentsClient)
+  client.configure(conversionsClient)
+  client.configure(conversionsClient)
   return client
 }
