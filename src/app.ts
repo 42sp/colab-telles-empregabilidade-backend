@@ -22,22 +22,7 @@ import { authentication } from './authentication'
 import { services } from './services/index'
 import { channels } from './channels'
 
-import { getColumnsData } from './homeTest/homeData'
-import expressPuro, { Request, Response } from 'express'
-
 const app: Application = express(feathers())
-const router = expressPuro.Router()
-
-router.get('/columns', async (req: Request, res: Response) => {
-  try {
-    const result = await getColumnsData(app)
-    console.log(result)
-  } catch (error) {
-    console.error(error);
-  }
-})
-
-app.use(router)
 
 // Load app configuration
 app.configure(configuration(configurationValidator))
