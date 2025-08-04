@@ -1,5 +1,5 @@
 import { Knex } from 'knex'
-import type { ColumnsMap } from './columns.class'
+import { ColumnsMap } from './columns.shared'
 
 export async function getStudentsColumns(knex: Knex): Promise<ColumnsMap> {
 	const result = await knex('students').columnInfo()

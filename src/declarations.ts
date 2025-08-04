@@ -4,6 +4,8 @@ import { Application as FeathersApplication } from '@feathersjs/express'
 import { ApplicationConfiguration } from './configuration'
 
 import { User } from './services/users/users'
+import { ColumnsPath } from './services/columns/columns.shared'
+import { ColumnsService } from './services/columns/columns.class'
 
 export type { NextFunction }
 
@@ -13,7 +15,9 @@ export interface Configuration extends ApplicationConfiguration {}
 
 // A mapping of service names to types. Will be extended in service files.
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface ServiceTypes {}
+export interface ServiceTypes {
+  [ColumnsPath]: ColumnsService
+}
 
 // The application instance type that will be used everywhere else
 export type Application = FeathersApplication<ServiceTypes, Configuration>

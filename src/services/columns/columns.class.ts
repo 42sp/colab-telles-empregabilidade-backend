@@ -1,18 +1,11 @@
 import { Knex } from 'knex'
-import { Application } from '../../declarations'
 import { Params } from '@feathersjs/feathers'
 import { getStudentsColumns } from './getStudentsColumns'
+import { Application } from '../../declarations'
+import { ColumnsMap, ColumnsParams } from './columns.shared';
 
-type ColumnMeta = {
-  label: string
-  isVisible: boolean
-}
-
-export const columnsPath: string = "columns"
-
-export type ColumnsMap = Record<string, ColumnMeta>
-
-class ColunmsService {
+export class ColumnsService
+{
 	app: Application;
 
 	constructor(app: Application) {
@@ -23,11 +16,4 @@ class ColunmsService {
 		const knex: Knex = this.app.get('postgresqlClient');
 		return (getStudentsColumns(knex));
 	}
-}
-
-export const columns = (app: Application) => {
-	app.use(columnsPath, new ColunmsService(app), {
-		methods: ['find'],
-		events: [],
-	});
 }
