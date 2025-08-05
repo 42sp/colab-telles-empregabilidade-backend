@@ -12,7 +12,8 @@ export const scrapOperations = (app: Application) => {
   const options = {
     paginate: app.get('paginate'),
     Model: app.get('postgresqlClient'),
-    name: 'scrap_operations'
+    name: 'scrap_operations',
+    id: 'uuid'
   }
   console.log('[INIT] Registrando scrapOperations em', scrapOperationsPath)
 

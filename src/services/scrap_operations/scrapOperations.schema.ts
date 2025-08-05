@@ -7,6 +7,7 @@ import { Type } from '@feathersjs/typebox'
 export const scrapOperationsSchema = Type.Object(
   {
     id: Type.Number(),
+    uuid: Type.Optional(Type.String({ format: 'uuid' })),
     name: Type.String(),
     type: Type.Optional(Type.String()),
     status: Type.Union([
@@ -31,6 +32,7 @@ export type ScrapOperations = Static<typeof scrapOperationsSchema>
 // Gera o tipo TypeScript baseado no schema
 export const scrapOperationsQueryProperties = Type.Pick(scrapOperationsSchema, [
   'id',
+  'uuid',
   'name',
   'status',
   'user_tag',
