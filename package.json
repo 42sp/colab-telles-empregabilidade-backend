@@ -39,7 +39,8 @@
   "scripts": {
     "dev": "nodemon -x ts-node src/index.ts",
     "compile": "shx rm -rf lib/ && tsc",
-    "start": "node lib/",
+    "build": "tsc",
+    "start": "npm run build && node lib/",
     "prettier": "npx prettier \"**/*.ts\" --write",
     "mocha": "cross-env NODE_ENV=test mocha test/ --require ts-node/register --recursive --extension .ts --exit",
     "test": "cross-env NODE_ENV=test npm run migrate && npm run mocha",
@@ -63,8 +64,10 @@
     "@feathersjs/schema": "^5.0.34",
     "@feathersjs/socketio": "^5.0.34",
     "@feathersjs/transport-commons": "^5.0.34",
+    "@feathersjs/typebox": "^5.0.34",
+    "@sinclair/typebox": "^0.34.38",
     "compression": "^1.8.1",
-    "dotenv": "^17.2.0",
+    "dotenv": "^17.2.1",
     "knex": "^3.1.0",
     "pg": "^8.16.3",
     "winston": "^3.17.0"

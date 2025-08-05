@@ -1,10 +1,13 @@
 import { students } from './students/students'
 import { user } from './users/users'
+import { scrapOperations } from './scrap_operations/scrapOperations'
+
 // For more information about this file see https://dove.feathersjs.com/guides/cli/application.html#configure-functions
 import type { Application } from '../declarations'
 
 export const services = (app: Application) => {
+  console.log('[SERVICES] Função services está sendo chamada')
   app.configure(students)
   app.configure(user)
-  // All services will be registered here
+  app.configure(scrapOperations)
 }
