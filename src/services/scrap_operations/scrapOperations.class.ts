@@ -11,7 +11,9 @@ export class ScrapOperationsService extends KnexService<
   ScrapOperationsParams
 > {
   // Overloads para respeitar assinatura base do método find
-  async find(params?: ScrapOperationsParams & { paginate?: PaginationOptions }): Promise<Paginated<ScrapOperations>>
+  async find(
+    params?: ScrapOperationsParams & { paginate?: PaginationOptions }
+  ): Promise<Paginated<ScrapOperations>>
   async find(params?: ScrapOperationsParams & { paginate: false }): Promise<ScrapOperations[]>
   async find(params?: ScrapOperationsParams): Promise<Paginated<ScrapOperations> | ScrapOperations[]> {
     // Se o parâmetro query.type for 'active', altera a query para filtrar status 'Agendado' e ordenar pela data agendada ascendente

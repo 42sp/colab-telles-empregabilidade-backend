@@ -6,7 +6,6 @@ import { scrapOperations } from './scrap_operations/scrapOperations'
 import type { Application } from '../declarations'
 
 export const services = (app: Application) => {
-  console.log('[SERVICES] Função services está sendo chamada')
   app.configure(students)
   app.configure(user)
   app.configure(scrapOperations)

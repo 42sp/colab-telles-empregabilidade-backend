@@ -15,7 +15,6 @@ export const scrapOperations = (app: Application) => {
     name: 'scrap_operations',
     id: 'uuid'
   }
-  console.log('[INIT] Registrando scrapOperations em', scrapOperationsPath)
 
   app.use(scrapOperationsPath, new ScrapOperationsService(options), {
     methods: scrapOperationsMethods,

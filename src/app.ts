@@ -43,16 +43,11 @@ app.configure(
     }
   })
 )
-console.log('Antes de "app.configure(postgresql)" ')
 app.configure(postgresql)
 app.set('authentication', configAuthentication)
 app.configure(authentication)
 
-console.log('Antes de "app.configure(services)" ')
 app.configure(services)
-console.log('[APP] services configurados no app')
-
-console.log('Serviços registrados no app:', Object.keys(app.services))
 
 app.use((req, res, next) => {
   console.log('Request:', req.method, req.url)
