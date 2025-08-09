@@ -34,7 +34,7 @@ export const conversionsSchema = Type.Object({
 	track: Type.String(),
 
 	// Organization Information
-	organizationName: Type.String(),
+	organizationName: Type.Optional(Type.String()),
 	organizationWebsite: Type.Optional(Type.String()),
 	partnerCompany: Type.Boolean(),
 	topGlobalCompanies: Type.Boolean(),

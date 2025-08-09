@@ -1,3 +1,4 @@
+import { importFiles } from './import-files/import-files'
 import { conversions } from './conversions/conversions'
 import { students } from './students/students'
 import { user } from './users/users'
@@ -5,6 +6,7 @@ import { user } from './users/users'
 import type { Application } from '../declarations'
 
 export const services = (app: Application) => {
+  app.configure(importFiles)
   app.configure(conversions)
   app.configure(students)
   app.configure(user)
