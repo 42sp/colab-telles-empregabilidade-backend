@@ -33,7 +33,6 @@ app.use(urlencoded({ extended: true }))
 app.use('/', serveStatic(app.get('public')))
 
 
-
 // Configure services and real-time functionality
 app.configure(rest())
 app.configure(

@@ -47,7 +47,8 @@
     "bundle:client": "npm run compile && npm pack --pack-destination ./public",
     "migrate": "dotenvx run --env-file=.env -- knex migrate:latest",
     "migrate:up": "dotenvx run --env-file=.env -- knex migrate:up",
-    "migrate:make": "dotenvx run -f .env -- knex migrate:make"
+    "migrate:make": "dotenvx run -f .env -- knex migrate:make",
+    "migrate:dow": "dotenvx run -f .env -- knex migrate:down"
   },
   "dependencies": {
     "@dotenvx/dotenvx": "^1.48.3",
@@ -68,14 +69,20 @@
     "@sinclair/typebox": "^0.34.38",
     "compression": "^1.8.1",
     "dotenv": "^17.2.1",
+    "compression": "^1.8.1",
+    "dotenv": "^17.2.0",
+    "exceljs": "^4.4.0",
     "knex": "^3.1.0",
+    "multer": "^2.0.2",
     "pg": "^8.16.3",
-    "winston": "^3.17.0"
+    "winston": "^3.17.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@feathersjs/cli": "^5.0.34",
     "@feathersjs/rest-client": "^5.0.34",
     "@types/mocha": "^10.0.10",
+    "@types/multer": "^2.0.0",
     "@types/node": "^22.16.5",
     "axios": "^1.10.0",
     "cross-env": "^7.0.3",
