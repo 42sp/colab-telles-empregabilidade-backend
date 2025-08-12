@@ -18,6 +18,7 @@ export const studentsSchema = {
     cpf: { type: 'string' },
     celphone: { type: 'string' },
     linkedin: { type: 'string' },
+    holderContractStatus: { type: 'string' },
   }
 } as const
 export type Students = FromSchema<typeof studentsSchema>
