@@ -32,7 +32,6 @@ app.use(urlencoded({ extended: true }))
 // Host the public folder
 app.use('/', serveStatic(app.get('public')))
 
-console.log('DATABASE_URL', process.env.DATABASE_URL)
 
 // Configure services and real-time functionality
 app.configure(rest())
@@ -48,6 +47,12 @@ app.set('authentication', configAuthentication)
 app.configure(authentication)
 
 app.configure(services)
+
+app.use((req, res, next) => {
+  console.log('Request:', req.method, req.url)
+  next()
+})
+
 app.configure(channels)
 
 // Configure a middleware for 404s and the error handler

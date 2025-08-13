@@ -1,7 +1,9 @@
 import { defaultAppSettings, getValidator } from '@feathersjs/schema'
 import type { FromSchema } from '@feathersjs/schema'
 
-import { dataValidator } from './validators.ts'
+import { dataValidator } from './validators'
+
+require('dotenv').config();
 
 export const configurationSchema = {
   $id: 'configuration',
@@ -25,7 +27,7 @@ export const configPostgres = {
     "password": process.env.POSTGRES_PASSWORD,
     "database": process.env.POSTGRES_DB
   }
-  } as const
+} as const
 
   export const configAuthentication = {
     "entity": "user",

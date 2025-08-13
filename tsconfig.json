@@ -11,13 +11,14 @@
     "strict": true,
     "esModuleInterop": true,
     "sourceMap": true,
-    "allowImportingTsExtensions": true,
-    "noEmit": true
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "baseUrl": "./src",
+    "paths": {
+      "*": ["*"]
+    }
   },
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "test"
-  ]
+  "include": ["src"],
+  "exclude": ["test"]
 }
