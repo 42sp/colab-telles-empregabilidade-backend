@@ -25,30 +25,31 @@ export const scrapOperationsSchema = Type.Object(
     // ------------------------------
     scheduled_date: Type.String({ format: 'date' }), /** Data agendada */
     scheduled_time: Type.String(), /** Hora agendada */
-    repeat_days: Type.Optional(Type.String()), /** Dias para a repetição */
-    repeat_time: Type.Optional(Type.String()), /** Hora da repetição */
+    repeat_days: Type.Optional(Type.Union([Type.String(), Type.Null()])), /** Dias para a repetição */
+    repeat_time: Type.Optional(Type.Union([Type.String(), Type.Null()])), /** Hora da repetição */
 
     // ------------------------------
     // 🔹 Auditoria e Controle
     // ------------------------------
     created_by: Type.Optional(Type.String()), /** Usuário que criou */
-    created_at: Type.Optional(Type.String({ format: 'date-time' })), /** Data da criação */
+    created_at: Type.Optional(Type.Union([Type.String({ format: 'date-time' }), Type.Null()])), /** Data da criação */
     deleted: Type.Optional(Type.Boolean({ default: false })), /** Flag de deleção */
-    deleted_by: Type.Optional(Type.String()), /** Usuário que deletou */
-    deleted_at: Type.Optional(Type.String({ format: 'date-time' })), /** Data da deleção */
-    last_edited_by: Type.Optional(Type.String()), /** Último usuário que editou */
-    last_edited_at: Type.Optional(Type.String({ format: 'date-time' })), /** Data da última edição */
+    deleted_by: Type.Optional(Type.Union([Type.String(), Type.Null()])), /** Usuário que deletou */
+    deleted_at: Type.Optional(Type.Union([Type.String({ format: 'date-time' }), Type.Null()])), /** Data da deleção */
+    last_edited_by: Type.Optional(Type.Union([Type.String(), Type.Null()])), /** Último usuário que editou */
+    last_edited_at: Type.Optional(Type.Union([Type.String({ format: 'date-time' }), Type.Null()])), /** Data da última edição */
 
     // ------------------------------
     // 🔹 Execução e Resultado
     // ------------------------------
-    started_at: Type.Optional(Type.String({ format: 'date-time' })), /** Data/hora de início da execução */
-    finished_at: Type.Optional(Type.String({ format: 'date-time' })), /** Data/hora de término */
-    result: Type.Optional(Type.Object({})), /** Resultado da operação */
-    error_message: Type.Optional(Type.String()) /** Mensagem de erro em caso de falha */
+    started_at: Type.Optional(Type.Union([Type.String({ format: 'date-time' }), Type.Null()])), /** Data/hora de início da execução */
+    finished_at: Type.Optional(Type.Union([Type.String({ format: 'date-time' }), Type.Null()])), /** Data/hora de término */
+    result: Type.Optional(Type.Union([Type.Object({}, { additionalProperties: true }), Type.Null()])), /** Resultado da operação */
+    error_message: Type.Optional(Type.Union([Type.String(), Type.Null()])) /** Mensagem de erro em caso de falha */
   },
   { additionalProperties: false }
 )
+
 
 export type ScrapOperations = Static<typeof scrapOperationsSchema>
 
@@ -107,9 +108,28 @@ export type ScrapOperationsData = Static<typeof scrapOperationsDataSchema>
 // 🔹 Dados para atualização
 // ------------------------------
 export const scrapOperationsPatchSchema = Type.Partial(
-  Type.Intersect([
-    scrapOperationsDataSchema,
-    Type.Pick(scrapOperationsSchema, ['status', 'started_at', 'finished_at', 'deleted', 'deleted_at', 'deleted_by', 'error_message'])
+  Type.Pick(scrapOperationsSchema, [
+    'id',
+    'uuid',
+    'name',
+    'type',
+    'status',
+    'user_tag',
+    'scheduled_date',
+    'scheduled_time',
+    'repeat_days',
+    'repeat_time',
+    'created_by',
+    'created_at',
+    'deleted_at',
+    'deleted_by',
+    'deleted',
+    'last_edited_by',
+    'last_edited_at',
+    'started_at',
+    'finished_at',
+    'result',
+    'error_message'
   ]),
   { additionalProperties: false }
 )

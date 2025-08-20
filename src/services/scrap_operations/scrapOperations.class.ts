@@ -10,37 +10,62 @@ export class ScrapOperationsService extends KnexService<
   ScrapOperationsData,
   ScrapOperationsParams
 > {
-  // Overloads para respeitar assinatura base do método find
+  // Sobrescreve o find mantendo lógica customizada
   async find(
     params?: ScrapOperationsParams & { paginate?: PaginationOptions }
   ): Promise<Paginated<ScrapOperations>>
   async find(params?: ScrapOperationsParams & { paginate: false }): Promise<ScrapOperations[]>
   async find(params?: ScrapOperationsParams): Promise<Paginated<ScrapOperations> | ScrapOperations[]> {
-    // Se o parâmetro query.type for 'active', altera a query para filtrar status 'Agendado' e ordenar pela data agendada ascendente
     if (params?.query?.type === 'active') {
       return super.find({
-        ...params, // espalha os outros parâmetros recebidos
-        query: {
-          ...params.query, // espalha os filtros da query originais
-          status: 'Agendado', // adiciona filtro fixo status = 'Agendado'
-          $sort: { scheduled_date: 1 } // ordena pela data agendada crescente
-        }
+        ...params,
+        query: { ...params.query, status: 'Agendado', $sort: { scheduled_date: 1 } }
       })
     }
-
-    // Se o parâmetro query.type for 'history', altera a query para filtrar status diferente de 'Agendado' e ordenar pelo início decrescente
     if (params?.query?.type === 'history') {
+      // Retorna todas que não estão agendadas ou que foram deletadas
       return super.find({
         ...params,
         query: {
           ...params.query,
-          status: { $ne: 'Agendado' }, // filtro status diferente de 'Agendado'
-          $sort: { started_at: -1 } // ordena pelo campo started_at decrescente
+          $or: [{ status: { $ne: 'Agendado' } }, { deleted: true }],
+          $sort: { started_at: -1 }
         }
       })
     }
-
-    // Se não houver tipo definido na query ou não for 'active' nem 'history', chama find normal do super sem alteração
     return super.find(params)
+  }
+
+  // Sobrecarga do patch
+  async patch(
+    id: string | number,
+    data: Partial<ScrapOperations>,
+    params?: ScrapOperationsParams
+  ): Promise<ScrapOperations>
+  async patch(
+    id: null,
+    data: Partial<ScrapOperations>,
+    params?: ScrapOperationsParams
+  ): Promise<ScrapOperations[]>
+  async patch(
+    id: string | number | null,
+    data: Partial<ScrapOperations>,
+    params?: ScrapOperationsParams
+  ): Promise<ScrapOperations | ScrapOperations[]> {
+    const result = await super.patch(id, data, params)
+
+    // Normaliza para array e emite eventos
+    const resultsArray = Array.isArray(result) ? result : [result]
+    for (const r of resultsArray) {
+      if (r.status === 'Em Execução') {
+        ;(this as any).emit('operation:started', r, params)
+      } else if (r.status === 'Concluído') {
+        ;(this as any).emit('operation:finished', r, params)
+      } else if (r.status === 'Falha') {
+        ;(this as any).emit('operation:failed', r, params)
+      }
+    }
+
+    return result
   }
 }
