@@ -1,4 +1,3 @@
-// scrapOperations.hooks.ts
 import type { HookContext } from '@feathersjs/feathers'
 import { getScrapOperationsDataValidator } from './scrapOperations.validator'
 

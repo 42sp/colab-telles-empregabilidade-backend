@@ -6,14 +6,13 @@ import hooks from './scrapOperations.hooks'
 export * from './scrapOperations.class'
 export * from './scrapOperations.schema'
 
-// NÃO repita a interface ServiceTypes aqui. Isso já está em `declarations.ts`
 
 export const scrapOperations = (app: Application) => {
   const options = {
     paginate: app.get('paginate'),
     Model: app.get('postgresqlClient'),
     name: 'scrap_operations',
-    id: 'uuid'
+    id: 'id'
   }
 
   app.use(scrapOperationsPath, new ScrapOperationsService(options), {
