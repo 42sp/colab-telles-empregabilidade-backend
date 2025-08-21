@@ -59,7 +59,7 @@ export const importedFilesQuerySchema = {
   type: 'object',
   additionalProperties: false,
   properties: {
-    ...querySyntax(importedFilesSchema.properties)
+    ...querySyntax({...importedFilesSchema.properties, lastThree: { type: 'boolean' }})
   }
 } as const
 export type ImportedFilesQuery = FromSchema<typeof importedFilesQuerySchema>
