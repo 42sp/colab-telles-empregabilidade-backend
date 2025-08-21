@@ -2,6 +2,7 @@ import type { Knex } from "knex";
 
 
 export async function up(knex: Knex): Promise<void> {
+	if (await knex.schema.hasTable('students')) return;
 	await knex.schema.alterTable('students', table => {
 		table.string('name').notNullable();
 		table.string('socialName');
