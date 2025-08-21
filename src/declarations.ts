@@ -2,18 +2,21 @@
 import { HookContext as FeathersHookContext, NextFunction } from '@feathersjs/feathers'
 import { Application as FeathersApplication } from '@feathersjs/express'
 import { ApplicationConfiguration } from './configuration'
+import { scrapOperationsPath } from './services/scrap_operations/scrapOperations.shared'
+import type { ScrapOperations } from './services/scrap_operations/scrapOperations.schema' // <- pega o tipo dos dados
+import type { ScrapOperationsService } from './services/scrap_operations/scrapOperations.class' // <- pega a classe
 
 import { User } from './services/users/users'
 
 export type { NextFunction }
 
 // The types for app.get(name) and app.set(name)
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface Configuration extends ApplicationConfiguration {}
 
-// A mapping of service names to types. Will be extended in service files.
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface ServiceTypes {}
+// A mapping of service names to types. Definido com o tipo da service class (não dos dados em si)
+export interface ServiceTypes {
+  [scrapOperationsPath]: ScrapOperationsService
+}
 
 // The application instance type that will be used everywhere else
 export type Application = FeathersApplication<ServiceTypes, Configuration>
