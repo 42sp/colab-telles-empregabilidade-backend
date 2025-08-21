@@ -45,7 +45,16 @@ export const importedFiles = (app: Application) => {
         schemaHooks.validateQuery(importedFilesQueryValidator),
         schemaHooks.resolveQuery(importedFilesQueryResolver)
       ],
-      find: [],
+      find: [
+				async (context: HookContext) => {
+					if (context.params.query?.lastThree) {
+						context.params.query.$limit = 3;
+						context.params.query.$sort = { id: -1 };
+						delete context.params.query.lastThree;
+					}
+					return context;
+				}
+			],
       get: [],
       create: [
         schemaHooks.validateData(importedFilesDataValidator),
@@ -64,6 +73,7 @@ export const importedFiles = (app: Application) => {
 						context.result && context.result.data[0].userId
 					) {
 						try {
+							context.result.data.order
 							for (const item of context.result.data) {
 								const user = await context.app.service('users').get(item.userId);
 								(item as any).user = user;
