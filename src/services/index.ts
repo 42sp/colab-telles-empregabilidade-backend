@@ -1,3 +1,6 @@
+import { importedFiles } from './imported-files/imported-files'
+import { importFiles } from './import-files/import-files'
+import { conversions } from './conversions/conversions'
 import { students } from './students/students'
 import { user } from './users/users'
 import { scrapOperations } from './scrap_operations/scrapOperations'
@@ -6,6 +9,9 @@ import { scrapOperations } from './scrap_operations/scrapOperations'
 import type { Application } from '../declarations'
 
 export const services = (app: Application) => {
+  app.configure(importedFiles)
+  app.configure(importFiles)
+  app.configure(conversions)
   app.configure(students)
   app.configure(user)
   app.configure(scrapOperations)

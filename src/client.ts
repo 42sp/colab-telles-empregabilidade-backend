@@ -4,6 +4,30 @@ import type { TransportConnection, Application } from '@feathersjs/feathers'
 import authenticationClient from '@feathersjs/authentication-client'
 import type { AuthenticationClientOptions } from '@feathersjs/authentication-client'
 
+import { importedFilesClient } from './services/imported-files/imported-files.shared'
+export type {
+  ImportedFiles,
+  ImportedFilesData,
+  ImportedFilesQuery,
+  ImportedFilesPatch
+} from './services/imported-files/imported-files.shared'
+
+import { importFilesClient } from './services/import-files/import-files.shared'
+export type {
+  ImportFiles,
+  ImportFilesData,
+  ImportFilesQuery,
+  ImportFilesPatch
+} from './services/import-files/import-files.shared'
+
+import { conversionsClient } from './services/conversions/conversions.shared'
+export type {
+  Conversions,
+  ConversionsData,
+  ConversionsQuery,
+  ConversionsPatch
+} from './services/conversions/conversions.shared'
+
 import { studentsClient } from './services/students/students.shared'
 export type {
   Students,
@@ -43,5 +67,8 @@ export const createClient = <Configuration = any,>(
 
   client.configure(userClient)
   client.configure(studentsClient)
+  client.configure(conversionsClient)
+  client.configure(importFilesClient)
+  client.configure(importedFilesClient)
   return client
 }
