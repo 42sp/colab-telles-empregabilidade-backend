@@ -1,4 +1,3 @@
-// For more information about this file see https://dove.feathersjs.com/guides/cli/application.html
 import { feathers } from '@feathersjs/feathers'
 import express, {
   rest,
@@ -12,6 +11,7 @@ import express, {
 import 'dotenv/config';
 import configuration from '@feathersjs/configuration'
 import socketio from '@feathersjs/socketio'
+import { setupScrapOperationsCron } from "./jobs/scrapOperationsCron";
 
 import type { Application } from './declarations'
 import { configurationValidator, configAuthentication } from './configuration'
@@ -32,8 +32,6 @@ app.use(urlencoded({ extended: true }))
 // Host the public folder
 app.use('/', serveStatic(app.get('public')))
 
-// console.log('DATABASE_URL', process.env.DATABASE_URL)
-
 // Configure services and real-time functionality
 app.configure(rest())
 app.configure(
@@ -48,6 +46,12 @@ app.set('authentication', configAuthentication)
 app.configure(authentication)
 
 app.configure(services)
+
+app.use((req, res, next) => {
+  console.log('Request:', req.method, req.url)
+  next()
+})
+
 app.configure(channels)
 
 // Configure a middleware for 404s and the error handler
@@ -68,5 +72,7 @@ app.hooks({
   setup: [],
   teardown: []
 })
+
+setupScrapOperationsCron(app);
 
 export { app }

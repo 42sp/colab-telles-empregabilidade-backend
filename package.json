@@ -7,7 +7,9 @@
   "keywords": [
     "feathers"
   ],
-  "author": {},
+  "author": {
+    "name": "42 São Paulo"
+  },
   "contributors": [],
   "bugs": {},
   "engines": {
@@ -37,7 +39,8 @@
   "scripts": {
     "dev": "nodemon -x ts-node src/index.ts",
     "compile": "shx rm -rf lib/ && tsc",
-    "start": "node lib/",
+    "build": "tsc",
+    "start": "npm run build && node lib/",
     "prettier": "npx prettier \"**/*.ts\" --write",
     "mocha": "cross-env NODE_ENV=test mocha test/ --require ts-node/register --recursive --extension .ts --exit",
     "test": "cross-env NODE_ENV=test npm run migrate && npm run mocha",
@@ -45,8 +48,10 @@
     "migrate:up": "knex migrate:latest",
     "migrate:make": "knex migrate:make",
     "migrate:down": "knex migrate:down"
+
   },
   "dependencies": {
+    "@dotenvx/dotenvx": "^1.48.3",
     "@feathersjs/adapter-commons": "^5.0.34",
     "@feathersjs/authentication": "^5.0.34",
     "@feathersjs/authentication-client": "^5.0.34",
@@ -61,6 +66,7 @@
     "@feathersjs/socketio": "^5.0.34",
     "@feathersjs/transport-commons": "^5.0.34",
     "@feathersjs/typebox": "^5.0.34",
+    "@sinclair/typebox": "^0.34.38",
     "compression": "^1.8.1",
     "dotenv": "^17.2.0",
     "exceljs": "^4.4.0",
@@ -73,6 +79,7 @@
   "devDependencies": {
     "@feathersjs/cli": "^5.0.34",
     "@feathersjs/rest-client": "^5.0.34",
+    "@types/agenda": "^3.0.2",
     "@types/mocha": "^10.0.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^22.16.5",
