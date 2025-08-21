@@ -42,8 +42,9 @@
     "mocha": "cross-env NODE_ENV=test mocha test/ --require ts-node/register --recursive --extension .ts --exit",
     "test": "cross-env NODE_ENV=test npm run migrate && npm run mocha",
     "bundle:client": "npm run compile && npm pack --pack-destination ./public",
-    "migrate": "knex migrate:latest",
-    "migrate:make": "knex migrate:make"
+    "migrate:up": "knex migrate:latest",
+    "migrate:make": "knex migrate:make",
+    "migrate:down": "knex migrate:down"
   },
   "dependencies": {
     "@feathersjs/adapter-commons": "^5.0.34",
@@ -59,16 +60,21 @@
     "@feathersjs/schema": "^5.0.34",
     "@feathersjs/socketio": "^5.0.34",
     "@feathersjs/transport-commons": "^5.0.34",
+    "@feathersjs/typebox": "^5.0.34",
     "compression": "^1.8.1",
     "dotenv": "^17.2.0",
+    "exceljs": "^4.4.0",
     "knex": "^3.1.0",
+    "multer": "^2.0.2",
     "pg": "^8.16.3",
-    "winston": "^3.17.0"
+    "winston": "^3.17.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@feathersjs/cli": "^5.0.34",
     "@feathersjs/rest-client": "^5.0.34",
     "@types/mocha": "^10.0.10",
+    "@types/multer": "^2.0.0",
     "@types/node": "^22.16.5",
     "axios": "^1.10.0",
     "cross-env": "^7.0.3",
