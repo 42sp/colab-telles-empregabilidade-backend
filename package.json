@@ -48,7 +48,6 @@
     "migrate:up": "knex migrate:latest",
     "migrate:make": "knex migrate:make",
     "migrate:down": "knex migrate:down"
-
   },
   "dependencies": {
     "@dotenvx/dotenvx": "^1.48.3",
@@ -72,6 +71,7 @@
     "exceljs": "^4.4.0",
     "knex": "^3.1.0",
     "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
     "pg": "^8.16.3",
     "winston": "^3.17.0",
     "xlsx": "^0.18.5"

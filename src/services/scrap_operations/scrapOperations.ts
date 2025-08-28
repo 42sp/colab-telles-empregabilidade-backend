@@ -17,8 +17,7 @@ export const scrapOperations = (app: Application) => {
 
   // Registra o serviço com eventos customizados
   app.use(scrapOperationsPath, new ScrapOperationsService(options), {
-    methods: scrapOperationsMethods,
-    events: ['operation:started', 'operation:finished', 'operation:failed']
+    methods: scrapOperationsMethods
   });
 
   const service = app.service(scrapOperationsPath);

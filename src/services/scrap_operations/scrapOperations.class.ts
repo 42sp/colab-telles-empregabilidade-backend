@@ -1,30 +1,53 @@
-import type { Params, Paginated, PaginationOptions } from '@feathersjs/feathers'
+// scrapOperations.class.ts
+import type {
+  Paginated,
+  PaginationOptions
+} from '@feathersjs/feathers'
 import { KnexService } from '@feathersjs/knex'
 import type { KnexAdapterParams } from '@feathersjs/knex'
-import type { ScrapOperations, ScrapOperationsData, ScrapOperationsQuery } from './scrapOperations.schema'
 
-export interface ScrapOperationsParams extends KnexAdapterParams<ScrapOperationsQuery> {}
+import type {
+  ScrapOperations,
+  ScrapOperationsData,
+  ScrapOperationsQuery
+} from './scrapOperations.schema'
+
+// 🔹 Tipo extendido incluindo _source
+type ScrapOpWithSource = ScrapOperations & { _source?: 'cronjob' | 'user' | 'unknown' }
+
+export interface ScrapOperationsParams
+  extends KnexAdapterParams<ScrapOperationsQuery> {
+  source?: 'cronjob' | 'user' | 'unknown'
+}
 
 export class ScrapOperationsService extends KnexService<
   ScrapOperations,
   ScrapOperationsData,
   ScrapOperationsParams
 > {
-  // Sobrescreve o find mantendo lógica customizada
+  // ------------------------------
+  // FIND
+  // ------------------------------
   async find(
     params?: ScrapOperationsParams & { paginate?: PaginationOptions }
   ): Promise<Paginated<ScrapOperations>>
-  async find(params?: ScrapOperationsParams & { paginate: false }): Promise<ScrapOperations[]>
-  async find(params?: ScrapOperationsParams): Promise<Paginated<ScrapOperations> | ScrapOperations[]> {
+  async find(
+    params?: ScrapOperationsParams & { paginate: false }
+  ): Promise<ScrapOperations[]>
+  async find(
+    params?: ScrapOperationsParams
+  ): Promise<Paginated<ScrapOperations> | ScrapOperations[]> {
+    console.log('[SVC][FIND->] params.query:', params?.query)
+
+    let result: Paginated<ScrapOperations> | ScrapOperations[]
+
     if (params?.query?.type === 'active') {
-      return super.find({
+      result = await super.find({
         ...params,
         query: { ...params.query, status: 'Agendado', $sort: { scheduled_date: 1 } }
       })
-    }
-    if (params?.query?.type === 'history') {
-      // Retorna todas que não estão agendadas ou que foram deletadas
-      return super.find({
+    } else if (params?.query?.type === 'history') {
+      result = await super.find({
         ...params,
         query: {
           ...params.query,
@@ -32,40 +55,93 @@ export class ScrapOperationsService extends KnexService<
           $sort: { started_at: -1 }
         }
       })
+    } else {
+      result = await super.find(params as any)
     }
-    return super.find(params)
+
+    const count = Array.isArray(result) ? result.length : result.total
+    console.log('[SVC][FIND<-] ok, count:', count)
+    return result
   }
 
-  // Sobrecarga do patch
-  async patch(
-    id: string | number,
-    data: Partial<ScrapOperations>,
+  // ------------------------------
+  // CREATE
+  // ------------------------------
+  async create(
+    data: ScrapOperationsData,
     params?: ScrapOperationsParams
-  ): Promise<ScrapOperations>
+  ): Promise<ScrapOpWithSource>
+  async create(
+    data: ScrapOperationsData[],
+    params?: ScrapOperationsParams
+  ): Promise<ScrapOpWithSource[]>
+  async create(
+    data: ScrapOperationsData | ScrapOperationsData[],
+    params?: ScrapOperationsParams
+  ): Promise<ScrapOpWithSource | ScrapOpWithSource[]> {
+    console.log('[SVC][CREATE->] source:', params?.source ?? 'unknown')
+
+    const result = await super.create(data as any, params)
+
+    if (Array.isArray(result)) {
+      return result.map(item => ({ ...(item as ScrapOperations), _source: params?.source ?? 'unknown' }))
+    } else {
+      return { ...(result as ScrapOperations), _source: params?.source ?? 'unknown' }
+    }
+  }
+
+  // ------------------------------
+  // PATCH
+  // ------------------------------
   async patch(
     id: null,
-    data: Partial<ScrapOperations>,
+    data: Partial<ScrapOperationsData>,
     params?: ScrapOperationsParams
-  ): Promise<ScrapOperations[]>
+  ): Promise<ScrapOpWithSource[]>
+  async patch(
+    id: string | number,
+    data: Partial<ScrapOperationsData>,
+    params?: ScrapOperationsParams
+  ): Promise<ScrapOpWithSource>
   async patch(
     id: string | number | null,
-    data: Partial<ScrapOperations>,
+    data: Partial<ScrapOperationsData>,
     params?: ScrapOperationsParams
-  ): Promise<ScrapOperations | ScrapOperations[]> {
-    const result = await super.patch(id, data, params)
+  ): Promise<ScrapOpWithSource | ScrapOpWithSource[]> {
+    console.log('[SVC][PATCH->]', { id, source: params?.source ?? 'unknown', data })
 
-    // Normaliza para array e emite eventos
-    const resultsArray = Array.isArray(result) ? result : [result]
-    for (const r of resultsArray) {
-      if (r.status === 'Em Execução') {
-        ;(this as any).emit('operation:started', r, params)
-      } else if (r.status === 'Concluído') {
-        ;(this as any).emit('operation:finished', r, params)
-      } else if (r.status === 'Falha') {
-        ;(this as any).emit('operation:failed', r, params)
-      }
+    const result = await super.patch(id as any, data, params)
+
+    if (Array.isArray(result)) {
+      return result.map(item => ({ ...(item as ScrapOperations), _source: params?.source ?? 'unknown' }))
+    } else {
+      return { ...(result as ScrapOperations), _source: params?.source ?? 'unknown' }
     }
+  }
 
-    return result
+  // ------------------------------
+  // REMOVE
+  // ------------------------------
+  async remove(
+    id: null,
+    params?: ScrapOperationsParams
+  ): Promise<ScrapOpWithSource[]>
+  async remove(
+    id: string | number,
+    params?: ScrapOperationsParams
+  ): Promise<ScrapOpWithSource>
+  async remove(
+    id: string | number | null,
+    params?: ScrapOperationsParams
+  ): Promise<ScrapOpWithSource | ScrapOpWithSource[]> {
+    console.log('[SVC][REMOVE->]', { id, source: params?.source ?? 'unknown' })
+
+    const result = await super.remove(id as any, params)
+
+    if (Array.isArray(result)) {
+      return result.map(item => ({ ...(item as ScrapOperations), _source: params?.source ?? 'unknown' }))
+    } else {
+      return { ...(result as ScrapOperations), _source: params?.source ?? 'unknown' }
+    }
   }
 }

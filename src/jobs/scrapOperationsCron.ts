@@ -8,7 +8,7 @@ const APP_TZ = "America/Sao_Paulo";
 export function setupScrapOperationsCron(app: Application) {
   const service = app.service("scrap-operations") as {
     find(params?: any): Promise<ScrapOperations[]>;
-    patch(id: number, data: ScrapOperationsPatch): Promise<ScrapOperations>;
+    patch(id: number, data: ScrapOperationsPatch, params?: any): Promise<ScrapOperations>;
   };
 
   // Cronjob rodando a cada minuto
@@ -39,12 +39,12 @@ export function setupScrapOperationsCron(app: Application) {
         console.log(`[Cron] Encontradas ${operations.length} operações agendadas`);
 
         for (const op of operations) {
-          // Converte scheduled_date para Date de forma robusta
+          // Converte scheduled_date para Date
           let scheduledDate: Date;
           try {
             scheduledDate = new Date(op.scheduled_date);
             if (isNaN(scheduledDate.getTime())) {
-              throw new Error('Data inválida');
+              throw new Error("Data inválida");
             }
           } catch (error) {
             console.warn(`[Cron] scheduled_date inválido para operação ${op.id}:`, op.scheduled_date);
@@ -64,28 +64,40 @@ export function setupScrapOperationsCron(app: Application) {
 
             try {
               // Marca como "Em Execução"
-              await service.patch(op.id, {
-                status: "Em Execução",
-                started_at: new Date().toISOString(),
-              });
+              await service.patch(
+                op.id,
+                {
+                  status: "Em Execução",
+                  started_at: new Date().toISOString(),
+                },
+                { source: "cronjob" } // 🔹 Aqui marcamos a origem
+              );
 
               // === Lógica real da operação ===
               await new Promise((res) => setTimeout(res, 2000)); // Simulação de scrap
 
               // Marca como "Concluído"
-              await service.patch(op.id, {
-                status: "Concluído",
-                finished_at: new Date().toISOString(),
-              });
+              await service.patch(
+                op.id,
+                {
+                  status: "Concluído",
+                  finished_at: new Date().toISOString(),
+                },
+                { source: "cronjob" } // 🔹 Sempre indicar a origem
+              );
 
               console.log(`[Cron] Operação ${op.id} concluída`);
             } catch (err: any) {
               console.error(`[Cron] Erro na operação ${op.id}:`, err);
-              await service.patch(op.id, {
-                status: "Falha",
-                error_message: err.message,
-                finished_at: new Date().toISOString(),
-              });
+              await service.patch(
+                op.id,
+                {
+                  status: "Falha",
+                  error_message: err.message,
+                  finished_at: new Date().toISOString(),
+                },
+                { source: "cronjob" } // 🔹 Falha também vem marcada
+              );
             }
           }
         }

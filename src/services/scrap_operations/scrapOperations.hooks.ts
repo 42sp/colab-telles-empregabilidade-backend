@@ -7,11 +7,9 @@ export default {
   before: {
     create: [
       async (context: HookContext) => {
-        //console.log('[HOOK DEBUG] create payload recebido:', JSON.stringify(context.data, null, 2))
         try {
           await scrapOperationsDataValidator.create(context.data)
         } catch (err: any) {
-          //console.error('[HOOK DEBUG] erro de validação create:', JSON.stringify(err.errors || err, null, 2))
           throw err
         }
 
@@ -27,11 +25,9 @@ export default {
     ],
     update: [
       async (context: HookContext) => {
-        //console.log('[HOOK DEBUG] update payload recebido:', JSON.stringify(context.data, null, 2))
         try {
           await scrapOperationsDataValidator.update(context.data)
         } catch (err: any) {
-          //console.error('[HOOK DEBUG] erro de validação update:', JSON.stringify(err.errors || err, null, 2))
           throw err
         }
         return context
@@ -39,9 +35,10 @@ export default {
     ],
     patch: [
       async (context: HookContext) => {
-        //console.log('[HOOK DEBUG] patch payload recebido:', context.data)
+        // Captura a origem se vier nos params
+        const source = context.params?.source || 'unknown'
 
-        // Lista de campos permitidos para patch
+        // Lista de campos permitidos
         const allowedFields = [
           'name',
           'scheduled_date',
@@ -59,11 +56,9 @@ export default {
           'deleted_by'
         ]
 
-        // Filtra apenas os campos permitidos
+        // Filtra apenas os campos permitidos (não salva "source" no banco)
         context.data = Object.fromEntries(
-          Object.entries(context.data).filter(([key]) =>
-            allowedFields.includes(key)
-          )
+          Object.entries(context.data).filter(([key]) => allowedFields.includes(key))
         )
 
         // Ajusta scheduled_date se vier com timestamp
@@ -71,31 +66,54 @@ export default {
           context.data.scheduled_date = context.data.scheduled_date.split('T')[0]
         }
 
-        //console.log('[HOOK DEBUG] patch payload filtrado:', context.data)
-
-        // Valida o payload filtrado
+        // Validação
         try {
-          await scrapOperationsDataValidator.patch(context.data)
+          const validator = (await import('./scrapOperations.validator')).getScrapOperationsDataValidator()
+          await validator.patch(context.data)
         } catch (err: any) {
-          console.error(
-            '[HOOK DEBUG] erro de validação patch:',
-            JSON.stringify(err.errors || err, null, 2)
-          )
-          throw new Error(
-            'Falha na validação do patch: ' +
-              JSON.stringify(err.errors || err)
-          )
+          throw new Error('Falha na validação do patch: ' + JSON.stringify(err.errors || err))
         }
 
+        // Guarda a origem em params (não vai pro banco)
+        context.params = {
+          ...context.params,
+          source
+        }
+
+        console.log('[HOOK before.patch] context.params.source:', context.params?.source)
         return context
       }
     ],
     remove: []
   },
   after: {
-    all: [], find: [], get: [], create: [], update: [], patch: [], remove: []
+    all: [],
+    find: [],
+    get: [],
+    create: [],
+    update: [],
+    patch: [
+      async (context: HookContext) => {
+        const result = context.result
+        const source = context.params?.source || 'system'
+
+        // Garante que _source vai no payload WS
+        context.dispatch = { ...result, _source: source }
+
+        console.log('[HOOK after.patch] Enviando dispatch com _source:', context.dispatch)
+
+        return context
+      }
+    ],
+    remove: []
   },
   error: {
-    all: [], find: [], get: [], create: [], update: [], patch: [], remove: []
+    all: [],
+    find: [],
+    get: [],
+    create: [],
+    update: [],
+    patch: [],
+    remove: []
   }
 }
