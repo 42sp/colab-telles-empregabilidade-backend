@@ -22,15 +22,29 @@ export * from './students.class'
 export * from './students.schema'
 
 // A configure function that registers the service and its hooks via `app.configure`
+import express, { Request, Response } from 'express';
+
 export const students = (app: Application) => {
-  // Register our service on the Feathers application
-  app.use(studentsPath, new StudentsService(getOptions(app)), {
-    // A list of all methods this service exposes externally
-    methods: studentsMethods,
-    // You can add additional custom events to be sent to clients here
-    events: []
-  })
-  // Initialize hooks
+  const service = new StudentsService(getOptions(app));
+
+  // Rota principal do service
+  app.use(studentsPath, service, { methods: studentsMethods, events: [] });
+
+  // Rota customizada para stats usando express
+  const router = express.Router();
+
+  router.get('/', async (req: Request, res: Response) => {
+    try {
+      const result = await service.stats({ query: req.query });
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  app.use(`${studentsPath}/stats`, router);
+
+  // Hooks do service
   app.service(studentsPath).hooks({
     around: {
       all: [
@@ -56,14 +70,12 @@ export const students = (app: Application) => {
       ],
       remove: []
     },
-    after: {
-      all: []
-    },
-    error: {
-      all: []
-    }
-  })
-}
+    after: { all: [] },
+    error: { all: [] }
+  });
+};
+
+
 
 // Add this service to the service type index
 declare module '../../declarations' {

@@ -12,7 +12,7 @@ export type StudentsClientService = Pick<
 
 export const studentsPath = 'students'
 
-export const studentsMethods: Array<keyof StudentsService> = ['find', 'get', 'create', 'patch', 'remove']
+export const studentsMethods: Array<keyof StudentsService> = ['find', 'get', 'create', 'patch', 'remove', 'stats']
 
 export const studentsClient = (client: ClientApplication) => {
   const connection = client.get('connection')
