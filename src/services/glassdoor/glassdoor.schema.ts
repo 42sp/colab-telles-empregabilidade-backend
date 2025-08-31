@@ -10,14 +10,15 @@ import type { GlassdoorService } from './glassdoor.class'
 export const glassdoorSchema = {
   $id: 'Glassdoor',
   type: 'object',
-  additionalProperties: false,
+  additionalProperties: true,
   required: ['id'],
   properties: {
 		id: { type: 'number' },
     company: { type: 'string' },
     country_code: { type: 'string' },
 		salaries_count: { type: 'number' },
-		company_type: { type: 'string' }
+		company_type: { type: 'string' },
+		region: { type: 'string' }
   }
 } as const
 export type Glassdoor = FromSchema<typeof glassdoorSchema>
@@ -30,15 +31,16 @@ export const glassdoorExternalResolver = resolve<Glassdoor, HookContext<Glassdoo
 export const glassdoorDataSchema = {
   $id: 'GlassdoorData',
   type: 'object',
-  additionalProperties: false,
-  // required: ['text'],
+  additionalProperties: true,
   properties: {
     ...glassdoorSchema.properties
   }
 } as const
 export type GlassdoorData = FromSchema<typeof glassdoorDataSchema>
 export const glassdoorDataValidator = getValidator(glassdoorDataSchema, dataValidator)
-export const glassdoorDataResolver = resolve<GlassdoorData, HookContext<GlassdoorService>>({})
+export const glassdoorDataResolver = resolve<GlassdoorData, HookContext<GlassdoorService>>({
+	test: () => undefined
+})
 
 // Schema for updating existing data
 export const glassdoorPatchSchema = {
