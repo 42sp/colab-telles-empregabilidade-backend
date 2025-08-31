@@ -4,6 +4,14 @@ import type { TransportConnection, Application } from '@feathersjs/feathers'
 import authenticationClient from '@feathersjs/authentication-client'
 import type { AuthenticationClientOptions } from '@feathersjs/authentication-client'
 
+import { glassdoorClient } from './services/glassdoor/glassdoor.shared'
+export type {
+  Glassdoor,
+  GlassdoorData,
+  GlassdoorQuery,
+  GlassdoorPatch
+} from './services/glassdoor/glassdoor.shared'
+
 import { importedFilesClient } from './services/imported-files/imported-files.shared'
 export type {
   ImportedFiles,
@@ -70,5 +78,6 @@ export const createClient = <Configuration = any,>(
   client.configure(conversionsClient)
   client.configure(importFilesClient)
   client.configure(importedFilesClient)
+  client.configure(glassdoorClient)
   return client
 }
