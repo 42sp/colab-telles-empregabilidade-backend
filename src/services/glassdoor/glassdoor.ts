@@ -21,6 +21,19 @@ import { glassdoorPath, glassdoorMethods } from './glassdoor.shared'
 export * from './glassdoor.class'
 export * from './glassdoor.schema'
 
+const useCustomAuthHeader = (name = 'auth_header') => {
+  return async (context: any, next: any) => {
+    const headers = context.params?.headers ?? {};
+    const raw = headers[name] ?? headers[name.toLowerCase()];
+    if (raw && !context.params.authentication) {
+      const value = Array.isArray(raw) ? raw[0] : String(raw);
+      const token = value.startsWith('Bearer ') ? value.slice(7) : value;
+      context.params.authentication = { strategy: 'jwt', accessToken: token };
+    }
+    await next();
+  };
+};
+
 // A configure function that registers the service and its hooks via `app.configure`
 export const glassdoor = (app: Application) => {
   // Register our service on the Feathers application
@@ -34,6 +47,7 @@ export const glassdoor = (app: Application) => {
   app.service(glassdoorPath).hooks({
     around: {
       all: [
+				useCustomAuthHeader('auth_header'),
         authenticate('jwt'),
         schemaHooks.resolveExternal(glassdoorExternalResolver),
         schemaHooks.resolveResult(glassdoorResolver)
