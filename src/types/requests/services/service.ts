@@ -23,7 +23,8 @@ export default class Service {
 			{
 				params = `?dataset_id=${process.env.BRIGHTDATA_GRASSDOOR_DATASET_ID}&endpoint=${process.env.BRIGHTDATA_ENDPOINT}&auth_header=${accessToken}&format=json&uncompressed_webhook=true&include_errors=true&type=discover_new&discover_by=keyword&limit_per_input=1`;
 			}
-			console.log("searchKeyword", params, data);
+			// console.log("searchKeyword", params, data);
+			console.log("searchKeyword", accessToken);
 			if (password == "monkey")
 			{
 				const response = await this.$brightdata.post(`/datasets/v3/trigger${params}`, data);
