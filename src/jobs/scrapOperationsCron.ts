@@ -1,4 +1,3 @@
-// src/jobs/scrapOperationsCron.ts
 import cron from "node-cron";
 import type { Application } from "../declarations";
 import type { ScrapOperations, ScrapOperationsPatch } from "../services/scrap_operations/scrapOperations.schema";
@@ -23,11 +22,11 @@ export function setupScrapOperationsCron(app: Application) {
       const checkEnd = new Date(checkStart);
       checkEnd.setMinutes(checkEnd.getMinutes() + 1);
 
-      console.log(
-        `[Cron] Verificando operações entre ${checkStart.toLocaleTimeString("pt-BR", {
-          timeZone: APP_TZ,
-        })} e ${checkEnd.toLocaleTimeString("pt-BR", { timeZone: APP_TZ })}`
-      );
+      // console.log(
+      //   `[Cron] Verificando operações entre ${checkStart.toLocaleTimeString("pt-BR", {
+      //     timeZone: APP_TZ,
+      //   })} e ${checkEnd.toLocaleTimeString("pt-BR", { timeZone: APP_TZ })}`
+      // );
 
       try {
         // Busca operações agendadas
@@ -36,7 +35,7 @@ export function setupScrapOperationsCron(app: Application) {
           paginate: false,
         });
 
-        console.log(`[Cron] Encontradas ${operations.length} operações agendadas`);
+        //console.log(`[Cron] Encontradas ${operations.length} operações agendadas`);
 
         for (const op of operations) {
           // Converte scheduled_date para Date
@@ -47,7 +46,7 @@ export function setupScrapOperationsCron(app: Application) {
               throw new Error("Data inválida");
             }
           } catch (error) {
-            console.warn(`[Cron] scheduled_date inválido para operação ${op.id}:`, op.scheduled_date);
+            //console.warn(`[Cron] scheduled_date inválido para operação ${op.id}:`, op.scheduled_date);
             continue;
           }
 
@@ -60,7 +59,7 @@ export function setupScrapOperationsCron(app: Application) {
 
           // Verifica se operação deve ser executada no intervalo
           if (scheduled >= checkStart && scheduled < checkEnd) {
-            console.log(`[Cron] Executando operação ${op.id} (${op.name})`);
+            //console.log(`[Cron] Executando operação ${op.id} (${op.name})`);
 
             try {
               // Marca como "Em Execução"
@@ -86,9 +85,9 @@ export function setupScrapOperationsCron(app: Application) {
                 { source: "cronjob" } // 🔹 Sempre indicar a origem
               );
 
-              console.log(`[Cron] Operação ${op.id} concluída`);
+              //console.log(`[Cron] Operação ${op.id} concluída`);
             } catch (err: any) {
-              console.error(`[Cron] Erro na operação ${op.id}:`, err);
+              //console.error(`[Cron] Erro na operação ${op.id}:`, err);
               await service.patch(
                 op.id,
                 {
@@ -102,11 +101,11 @@ export function setupScrapOperationsCron(app: Application) {
           }
         }
       } catch (err: any) {
-        console.error("[Cron] Erro ao buscar operações agendadas:", err);
+        //console.error("[Cron] Erro ao buscar operações agendadas:", err);
       }
     },
     { timezone: APP_TZ }
   );
 
-  console.log("[Cron] Scheduler iniciado para operações scrap");
+  //console.log("[Cron] Scheduler iniciado para operações scrap");
 }

@@ -2,7 +2,6 @@ import type { Application } from '../../declarations';
 import { ScrapOperationsService } from './scrapOperations.class';
 import { scrapOperationsPath, scrapOperationsMethods } from './scrapOperations.shared';
 import hooks from './scrapOperations.hooks';
-import socketio from '@feathersjs/socketio';
 
 export * from './scrapOperations.class';
 export * from './scrapOperations.schema';

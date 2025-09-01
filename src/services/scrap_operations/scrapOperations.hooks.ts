@@ -35,10 +35,26 @@ export default {
     ],
     patch: [
       async (context: HookContext) => {
-        // Captura a origem se vier nos params
-        const source = context.params?.source || 'unknown'
+        // 1. Captura source/user do data OU dos params
+        const source =
+          context.data?._source ||
+          context.params?.source ||
+          context.params?.query?.$source ||
+          'unknown'
 
-        // Lista de campos permitidos
+        const user =
+          context.data?._user ||
+          context.params?.user ||
+          context.params?.headers?.user ||
+          'anonymous'
+
+        //console.log('[HOOK before.patch] capturado:', { source, user })
+
+        // 2. Remove campos de controle do payload (não vão para o DB)
+        if ('_source' in context.data) delete context.data._source
+        if ('_user' in context.data) delete context.data._user
+
+        // 3. Lista de campos permitidos para persistir
         const allowedFields = [
           'name',
           'scheduled_date',
@@ -56,31 +72,40 @@ export default {
           'deleted_by'
         ]
 
-        // Filtra apenas os campos permitidos (não salva "source" no banco)
         context.data = Object.fromEntries(
-          Object.entries(context.data).filter(([key]) => allowedFields.includes(key))
+          Object.entries(context.data).filter(([key]) =>
+            allowedFields.includes(key)
+          )
         )
 
-        // Ajusta scheduled_date se vier com timestamp
+        // 4. Ajusta scheduled_date se vier com timestamp
         if (context.data.scheduled_date?.includes('T')) {
           context.data.scheduled_date = context.data.scheduled_date.split('T')[0]
         }
 
-        // Validação
+        // 5. Validação
         try {
-          const validator = (await import('./scrapOperations.validator')).getScrapOperationsDataValidator()
+          const validator =
+            (await import('./scrapOperations.validator')).getScrapOperationsDataValidator()
           await validator.patch(context.data)
         } catch (err: any) {
-          throw new Error('Falha na validação do patch: ' + JSON.stringify(err.errors || err))
+          throw new Error(
+            'Falha na validação do patch: ' + JSON.stringify(err.errors || err)
+          )
         }
 
-        // Guarda a origem em params (não vai pro banco)
+        // 6. Injeta novamente em params (não vai pro banco)
         context.params = {
           ...context.params,
-          source
+          source,
+          user
         }
-
-        console.log('[HOOK before.patch] context.params.source:', context.params?.source)
+        //console.log('[TEST before.patch] context.params:', context.params)
+        //console.log('[TEST before.patch] context.data:', context.data)
+        //console.log(
+        //  '[HOOK before.patch] context.params.source:',
+        //  context.params?.source
+        //)
         return context
       }
     ],
@@ -96,11 +121,20 @@ export default {
       async (context: HookContext) => {
         const result = context.result
         const source = context.params?.source || 'system'
+        const user = context.params?.user || 'anonymous'
 
-        // Garante que _source vai no payload WS
-        context.dispatch = { ...result, _source: source }
+        // Garante que _source/_user vão no payload do WS (não no banco)
+        context.dispatch = { ...result, _source: source, _user: user }
 
-        console.log('[HOOK after.patch] Enviando dispatch com _source:', context.dispatch)
+        //console.log('[TEST after.patch] context.result:', context.result)
+        //console.log(
+        //   '[TEST after.patch] context.params.source:',
+        //   context.params?.source
+        // )
+        // console.log(
+        //   '[HOOK after.patch] Enviando dispatch com _source:',
+        //   context.dispatch
+        // )
 
         return context
       }

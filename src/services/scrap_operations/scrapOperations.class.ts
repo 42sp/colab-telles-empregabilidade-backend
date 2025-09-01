@@ -1,4 +1,3 @@
-// scrapOperations.class.ts
 import type {
   Paginated,
   PaginationOptions
@@ -37,7 +36,7 @@ export class ScrapOperationsService extends KnexService<
   async find(
     params?: ScrapOperationsParams
   ): Promise<Paginated<ScrapOperations> | ScrapOperations[]> {
-    console.log('[SVC][FIND->] params.query:', params?.query)
+    //console.log('[SVC][FIND->] params.query:', params?.query)
 
     let result: Paginated<ScrapOperations> | ScrapOperations[]
 
@@ -60,7 +59,7 @@ export class ScrapOperationsService extends KnexService<
     }
 
     const count = Array.isArray(result) ? result.length : result.total
-    console.log('[SVC][FIND<-] ok, count:', count)
+    //console.log('[SVC][FIND<-] ok, count:', count)
     return result
   }
 
@@ -79,7 +78,7 @@ export class ScrapOperationsService extends KnexService<
     data: ScrapOperationsData | ScrapOperationsData[],
     params?: ScrapOperationsParams
   ): Promise<ScrapOpWithSource | ScrapOpWithSource[]> {
-    console.log('[SVC][CREATE->] source:', params?.source ?? 'unknown')
+    //console.log('[SVC][CREATE->] source:', params?.source ?? 'unknown')
 
     const result = await super.create(data as any, params)
 
@@ -104,20 +103,29 @@ export class ScrapOperationsService extends KnexService<
     params?: ScrapOperationsParams
   ): Promise<ScrapOpWithSource>
   async patch(
-    id: string | number | null,
-    data: Partial<ScrapOperationsData>,
-    params?: ScrapOperationsParams
-  ): Promise<ScrapOpWithSource | ScrapOpWithSource[]> {
-    console.log('[SVC][PATCH->]', { id, source: params?.source ?? 'unknown', data })
+  id: string | number | null,
+  data: Partial<ScrapOperationsData>,
+  params?: ScrapOperationsParams
+): Promise<ScrapOpWithSource | ScrapOpWithSource[]> {
+  const source =
+    params?.source || (params?.query as any)?.$source || 'unknown';
+  
+  //console.log('[SVC][PATCH->] id:', id, 'source capturado:', source, 'data:', data);
 
-    const result = await super.patch(id as any, data, params)
+  const result = await super.patch(id as any, data, params);
 
-    if (Array.isArray(result)) {
-      return result.map(item => ({ ...(item as ScrapOperations), _source: params?.source ?? 'unknown' }))
-    } else {
-      return { ...(result as ScrapOperations), _source: params?.source ?? 'unknown' }
-    }
+  if (Array.isArray(result)) {
+    return result.map(item => ({
+      ...(item as ScrapOperations),
+      _source: source
+    }));
+  } else {
+    return {
+      ...(result as ScrapOperations),
+      _source: source
+    };
   }
+}
 
   // ------------------------------
   // REMOVE
@@ -134,7 +142,7 @@ export class ScrapOperationsService extends KnexService<
     id: string | number | null,
     params?: ScrapOperationsParams
   ): Promise<ScrapOpWithSource | ScrapOpWithSource[]> {
-    console.log('[SVC][REMOVE->]', { id, source: params?.source ?? 'unknown' })
+    //console.log('[SVC][REMOVE->]', { id, source: params?.source ?? 'unknown' })
 
     const result = await super.remove(id as any, params)
 
