@@ -1,46 +1,155 @@
-import type { Params, Paginated, PaginationOptions } from '@feathersjs/feathers'
+import type {
+  Paginated,
+  PaginationOptions
+} from '@feathersjs/feathers'
 import { KnexService } from '@feathersjs/knex'
 import type { KnexAdapterParams } from '@feathersjs/knex'
-import type { ScrapOperations, ScrapOperationsData, ScrapOperationsQuery } from './scrapOperations.schema'
 
-export interface ScrapOperationsParams extends KnexAdapterParams<ScrapOperationsQuery> {}
+import type {
+  ScrapOperations,
+  ScrapOperationsData,
+  ScrapOperationsQuery
+} from './scrapOperations.schema'
+
+// 🔹 Tipo extendido incluindo _source
+type ScrapOpWithSource = ScrapOperations & { _source?: 'cronjob' | 'user' | 'unknown' }
+
+export interface ScrapOperationsParams
+  extends KnexAdapterParams<ScrapOperationsQuery> {
+  source?: 'cronjob' | 'user' | 'unknown'
+}
 
 export class ScrapOperationsService extends KnexService<
   ScrapOperations,
   ScrapOperationsData,
   ScrapOperationsParams
 > {
-  // Overloads para respeitar assinatura base do método find
+  // ------------------------------
+  // FIND
+  // ------------------------------
   async find(
     params?: ScrapOperationsParams & { paginate?: PaginationOptions }
   ): Promise<Paginated<ScrapOperations>>
-  async find(params?: ScrapOperationsParams & { paginate: false }): Promise<ScrapOperations[]>
-  async find(params?: ScrapOperationsParams): Promise<Paginated<ScrapOperations> | ScrapOperations[]> {
-    // Se o parâmetro query.type for 'active', altera a query para filtrar status 'Agendado' e ordenar pela data agendada ascendente
-    if (params?.query?.type === 'active') {
-      return super.find({
-        ...params, // espalha os outros parâmetros recebidos
-        query: {
-          ...params.query, // espalha os filtros da query originais
-          status: 'Agendado', // adiciona filtro fixo status = 'Agendado'
-          $sort: { scheduled_date: 1 } // ordena pela data agendada crescente
-        }
-      })
-    }
+  async find(
+    params?: ScrapOperationsParams & { paginate: false }
+  ): Promise<ScrapOperations[]>
+  async find(
+    params?: ScrapOperationsParams
+  ): Promise<Paginated<ScrapOperations> | ScrapOperations[]> {
+    //console.log('[SVC][FIND->] params.query:', params?.query)
 
-    // Se o parâmetro query.type for 'history', altera a query para filtrar status diferente de 'Agendado' e ordenar pelo início decrescente
-    if (params?.query?.type === 'history') {
-      return super.find({
+    let result: Paginated<ScrapOperations> | ScrapOperations[]
+
+    if (params?.query?.type === 'active') {
+      result = await super.find({
+        ...params,
+        query: { ...params.query, status: 'Agendado', $sort: { scheduled_date: 1 } }
+      })
+    } else if (params?.query?.type === 'history') {
+      result = await super.find({
         ...params,
         query: {
           ...params.query,
-          status: { $ne: 'Agendado' }, // filtro status diferente de 'Agendado'
-          $sort: { started_at: -1 } // ordena pelo campo started_at decrescente
+          $or: [{ status: { $ne: 'Agendado' } }, { deleted: true }],
+          $sort: { started_at: -1 }
         }
       })
+    } else {
+      result = await super.find(params as any)
     }
 
-    // Se não houver tipo definido na query ou não for 'active' nem 'history', chama find normal do super sem alteração
-    return super.find(params)
+    const count = Array.isArray(result) ? result.length : result.total
+    //console.log('[SVC][FIND<-] ok, count:', count)
+    return result
+  }
+
+  // ------------------------------
+  // CREATE
+  // ------------------------------
+  async create(
+    data: ScrapOperationsData,
+    params?: ScrapOperationsParams
+  ): Promise<ScrapOpWithSource>
+  async create(
+    data: ScrapOperationsData[],
+    params?: ScrapOperationsParams
+  ): Promise<ScrapOpWithSource[]>
+  async create(
+    data: ScrapOperationsData | ScrapOperationsData[],
+    params?: ScrapOperationsParams
+  ): Promise<ScrapOpWithSource | ScrapOpWithSource[]> {
+    //console.log('[SVC][CREATE->] source:', params?.source ?? 'unknown')
+
+    const result = await super.create(data as any, params)
+
+    if (Array.isArray(result)) {
+      return result.map(item => ({ ...(item as ScrapOperations), _source: params?.source ?? 'unknown' }))
+    } else {
+      return { ...(result as ScrapOperations), _source: params?.source ?? 'unknown' }
+    }
+  }
+
+  // ------------------------------
+  // PATCH
+  // ------------------------------
+  async patch(
+    id: null,
+    data: Partial<ScrapOperationsData>,
+    params?: ScrapOperationsParams
+  ): Promise<ScrapOpWithSource[]>
+  async patch(
+    id: string | number,
+    data: Partial<ScrapOperationsData>,
+    params?: ScrapOperationsParams
+  ): Promise<ScrapOpWithSource>
+  async patch(
+  id: string | number | null,
+  data: Partial<ScrapOperationsData>,
+  params?: ScrapOperationsParams
+): Promise<ScrapOpWithSource | ScrapOpWithSource[]> {
+  const source =
+    params?.source || (params?.query as any)?.$source || 'unknown';
+  
+  //console.log('[SVC][PATCH->] id:', id, 'source capturado:', source, 'data:', data);
+
+  const result = await super.patch(id as any, data, params);
+
+  if (Array.isArray(result)) {
+    return result.map(item => ({
+      ...(item as ScrapOperations),
+      _source: source
+    }));
+  } else {
+    return {
+      ...(result as ScrapOperations),
+      _source: source
+    };
+  }
+}
+
+  // ------------------------------
+  // REMOVE
+  // ------------------------------
+  async remove(
+    id: null,
+    params?: ScrapOperationsParams
+  ): Promise<ScrapOpWithSource[]>
+  async remove(
+    id: string | number,
+    params?: ScrapOperationsParams
+  ): Promise<ScrapOpWithSource>
+  async remove(
+    id: string | number | null,
+    params?: ScrapOperationsParams
+  ): Promise<ScrapOpWithSource | ScrapOpWithSource[]> {
+    //console.log('[SVC][REMOVE->]', { id, source: params?.source ?? 'unknown' })
+
+    const result = await super.remove(id as any, params)
+
+    if (Array.isArray(result)) {
+      return result.map(item => ({ ...(item as ScrapOperations), _source: params?.source ?? 'unknown' }))
+    } else {
+      return { ...(result as ScrapOperations), _source: params?.source ?? 'unknown' }
+    }
   }
 }
