@@ -16,7 +16,11 @@ export class GlassdoorService<ServiceParams extends Params = GlassdoorParams> ex
   GlassdoorData,
   GlassdoorParams,
   GlassdoorPatch
-> {}
+> {
+	async create(data: any, params?: any): Promise<any> {
+		console.log(data);
+	}
+}
 
 export const getOptions = (app: Application): KnexAdapterOptions => {
   return {
