@@ -13,7 +13,7 @@ export const glassdoorSchema = {
   additionalProperties: true,
   required: ['id'],
   properties: {
-		id: { type: 'number' },
+		id: { type: 'string' },
     company: { type: 'string' },
     country_code: { type: 'string' },
 		salaries_count: { type: 'number' },
