@@ -43,8 +43,9 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 		try
 		{
 			const id = await this.insertImportedFile(file, String(params?.user?.id ?? ''));
-			await this.insertBdGeral(file, id, params?.authentication?.accessToken);
-			// await this.insertConversionsData(file, id);
+			const insertBdGeralRetorno = await this.insertBdGeral(file, id, params?.authentication?.accessToken);
+			await this.insertConversionsData(file, id);
+			await this.insertLinkedIn(insertBdGeralRetorno.dbGeralData, insertBdGeralRetorno.studentsId);
 
 			await trx.commit();
 
@@ -141,6 +142,12 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 		if (!result) {
 			throw new Error('Erro ao inserir dados de conversão.');
 		}
+	}
+
+	async insertLinkedIn(dbGeralData: any[], studentsId: number) {
+		const $service = useServices();
+
+		const searchLinkedInResponse = await $service.searchLinkedIn({ urls: dbGeralData.map(m => ({ url: m.linkedin })) });
 	}
 
 	async insertBdGeral(file: FileParams, importedFilesId: number, accessToken?: string) {
@@ -309,55 +316,18 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 			throw new Error('Nenhuma linha válida encontrada para importação. Verifique o arquivo.');
 		}
 
-		// const result = await this.Model('students').insert(dbGeralData);
+		const result = await this.Model('students').insert(dbGeralData).returning(['id']);
 
-		// if (!result) {
-		// 	throw new Error('Erro ao inserir dados de students.');
-		// }
-
-		const $service = useServices();
-
-		const searchLinkedInResponse = await $service.searchLinkedIn({ urls: dbGeralData.map(m => ({ url: m.linkedin })) });
-		// searchLinkedInResponse.push({ current_company: { name: "Itaú" } });
-		const searchListLinkedId = searchLinkedInResponse.map((item: any) => {
-				const current_company = item["current_company"];
-				let result = undefined;
-				if (current_company && current_company["name"])
-					result = { search_url: `https://www.glassdoor.com/Search/results.htm?keyword=${current_company["name"]}`, max_search_results: 1 };
-				return result;
-			}
-		).filter((f: any) => f !== undefined);
-		// console.log(searchListLinkedId);
-		if (searchListLinkedId && searchListLinkedId.length > 0 && accessToken)
-		{
-			const snapshot_id = await $service.searchGlassdoorKeyword(
-				{ input: searchListLinkedId,
-					custom_output_fields: [
-						"id", "company", "country_code", "region", "salaries_url", "salaries_count", "company_type"
-					]
-				},
-				accessToken
-			);
+		if (!result) {
+			throw new Error('Erro ao inserir dados de students.');
 		}
 
-		// searchLinkedInResponse.forEach((item: any) => console.log(item["current_company"]))
-		// console.log()
+		const studentsId = result[0].id ?? null;
 
-		// const searchKeywordResponse = await $service.searchKeyword({ input: [
-		// 	{ search_url: "https://www.glassdoor.com/Search/results.htm?keyword=Itaú", max_search_results: 1 }
-		// 	],
-		// 	custom_output_fields: [
-		// 		"id",
-    //     "company",
-    //     "country_code",
-    //     "region",
-    //     "salaries_url",
-    //     "salaries_count",
-    //     "company_type"
-		// 	]
-		// });
-
-		// searchKeywordResponse.forEach((item: any) => console.log(item));
+		return {
+			studentsId,
+			dbGeralData
+		}
 	}
 
 	private s(v: any): string {

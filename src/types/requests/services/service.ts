@@ -49,7 +49,7 @@ export default class Service {
 			{
 				params = `?dataset_id=${process.env.BRIGHTDATA_LIKEDIN_DATASET_ID}&include_errors=true`;
 			}
-			console.log("searchLinkedIn", data);
+			// console.log("searchLinkedIn", data);
 			// const response = await this.$brightdata.post(`/datasets/v3/trigger?${params}`, data);
 			return mockedSearchLinkedInResponse;
 		}
