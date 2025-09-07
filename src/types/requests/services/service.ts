@@ -39,19 +39,30 @@ export default class Service {
 		}
 	}
 
-	async searchLinkedIn(data: collection.SearchLinkedIn)
+	async searchLinkedIn(data: collection.SearchLinkedIn, accessToken: string)
 	{
 		try
 		{
 			let params = "";
 
-			if (process.env.BRIGHTDATA_LIKEDIN_DATASET_ID)
+			if (
+				process.env.BRIGHTDATA_LIKEDIN_DATASET_ID
+				&& process.env.BRIGHTDATA_ENDPOINT
+			)
 			{
-				params = `?dataset_id=${process.env.BRIGHTDATA_LIKEDIN_DATASET_ID}&include_errors=true`;
+				params = `?dataset_id=${process.env.BRIGHTDATA_LIKEDIN_DATASET_ID}`;
+				params += '&include_errors=true';
+				params += `&endpoint=${process.env.BRIGHTDATA_ENDPOINT}`;
+				params += `&auth_header=${accessToken}`;
+				params += '&format=json';
+				params += '&uncompressed_webhook=true';
 			}
-			// console.log("searchLinkedIn", data);
-			// const response = await this.$brightdata.post(`/datasets/v3/trigger?${params}`, data);
-			return mockedSearchLinkedInResponse;
+
+			const response = await this.$brightdata.post(`/datasets/v3/trigger${params}`, data.urls);
+
+			console.log(response.data);
+
+			return response;
 		}
 		catch (error)
 		{

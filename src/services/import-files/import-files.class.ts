@@ -45,7 +45,7 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 			const id = await this.insertImportedFile(file, String(params?.user?.id ?? ''));
 			const insertBdGeralRetorno = await this.insertBdGeral(file, id, params?.authentication?.accessToken);
 			await this.insertConversionsData(file, id);
-			await this.insertLinkedIn(insertBdGeralRetorno.dbGeralData, insertBdGeralRetorno.studentsId);
+			await this.insertLinkedIn(insertBdGeralRetorno.dbGeralData, insertBdGeralRetorno.studentsId, params?.authentication?.accessToken);
 
 			await trx.commit();
 
@@ -144,10 +144,13 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 		}
 	}
 
-	async insertLinkedIn(dbGeralData: any[], studentsId: number) {
+	async insertLinkedIn(dbGeralData: any[], studentsId: number, accessToken?: string) {
 		const $service = useServices();
 
-		const searchLinkedInResponse = await $service.searchLinkedIn({ urls: dbGeralData.map(m => ({ url: m.linkedin })) });
+		const searchLinkedInResponse = await $service.searchLinkedIn(
+			{ urls: dbGeralData.map(m => ({ url: m.linkedin })) },
+			String(accessToken)
+		);
 	}
 
 	async insertBdGeral(file: FileParams, importedFilesId: number, accessToken?: string) {
