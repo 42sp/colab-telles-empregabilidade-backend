@@ -8,6 +8,7 @@ import type { ImportFiles, ImportFilesData, ImportFilesPatch, ImportFilesQuery }
 
 import * as XLSX from 'xlsx';
 import { ImportedFiles } from '../imported-files/imported-files'
+import { useServices } from '../../hooks/useServices'
 
 export type { ImportFiles, ImportFilesData, ImportFilesPatch, ImportFilesQuery }
 
@@ -42,8 +43,9 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 		try
 		{
 			const id = await this.insertImportedFile(file, String(params?.user?.id ?? ''));
-			await this.insertBdGeral(file, id);
+			const insertBdGeralRetorno = await this.insertBdGeral(file, id, params?.authentication?.accessToken);
 			await this.insertConversionsData(file, id);
+			await this.insertLinkedIn(insertBdGeralRetorno.dbGeralData, insertBdGeralRetorno.studentsId, params?.authentication?.accessToken);
 
 			await trx.commit();
 
@@ -142,7 +144,16 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 		}
 	}
 
-	async insertBdGeral(file: FileParams, importedFilesId: number) {
+	async insertLinkedIn(dbGeralData: any[], studentsId: number, accessToken?: string) {
+		const $service = useServices();
+
+		const searchLinkedInResponse = await $service.searchLinkedIn(
+			{ urls: dbGeralData.map(m => ({ url: m.linkedin })) },
+			String(accessToken)
+		);
+	}
+
+	async insertBdGeral(file: FileParams, importedFilesId: number, accessToken?: string) {
 		const workbook = XLSX.read(file.buffer, { type: 'buffer' });
 		const sheetName = workbook.SheetNames.find(name => name.toLowerCase() === 'bd_geral');
 		if (!sheetName) throw new Error('Aba "bd_geral" não encontrada');
@@ -300,7 +311,9 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 				wordProficiencyLevel: this.s(row[headers[106]]) ?? undefined,
 				excelProficiencyLevel: this.s(row[headers[107]]) ?? undefined,
 				powerPointProficiencyLevel: this.s(row[headers[108]]) ?? undefined,
-				importedFilesId: importedFilesId
+				importedFilesId: importedFilesId,
+
+				createdAt: new Date().toISOString()
 			};
 		});
 
@@ -308,10 +321,17 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 			throw new Error('Nenhuma linha válida encontrada para importação. Verifique o arquivo.');
 		}
 
-		const result = await this.Model('students').insert(dbGeralData);
+		const result = await this.Model('students').insert(dbGeralData).returning(['id']);
 
 		if (!result) {
 			throw new Error('Erro ao inserir dados de students.');
+		}
+
+		const studentsId = result[0].id ?? null;
+
+		return {
+			studentsId,
+			dbGeralData
 		}
 	}
 
