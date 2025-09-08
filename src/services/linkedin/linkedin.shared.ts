@@ -12,7 +12,11 @@ export type LinkedinClientService = Pick<
 
 export const linkedinPath = 'linkedin'
 
+export const linkedinDashboardPath = 'linkedin/dashboard'
+
 export const linkedinMethods: Array<keyof LinkedinService> = ['find', 'get', 'create', 'patch', 'remove']
+
+export const linkedinDashboardMethods: Array<keyof LinkedinService> = ['find']
 
 export const linkedinClient = (client: ClientApplication) => {
   const connection = client.get('connection')
@@ -20,11 +24,16 @@ export const linkedinClient = (client: ClientApplication) => {
   client.use(linkedinPath, connection.service(linkedinPath), {
     methods: linkedinMethods
   })
+
+	client.use(linkedinDashboardPath, connection.service(linkedinDashboardPath), {
+		methods: linkedinDashboardMethods
+	})
 }
 
 // Add this service to the client service type index
 declare module '../../client' {
   interface ServiceTypes {
     [linkedinPath]: LinkedinClientService
+		[linkedinDashboardPath]: LinkedinClientService
   }
 }

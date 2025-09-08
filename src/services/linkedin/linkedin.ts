@@ -14,9 +14,10 @@ import {
   linkedinQueryResolver
 } from './linkedin.schema'
 
-import type { Application } from '../../declarations'
-import { LinkedinService, getOptions } from './linkedin.class'
-import { linkedinPath, linkedinMethods } from './linkedin.shared'
+import type { Application, HookContext, NextFunction } from '../../declarations'
+import { LinkedinDashboardService, LinkedinService, getOptions } from './linkedin.class'
+import { linkedinPath, linkedinMethods, linkedinDashboardPath, linkedinDashboardMethods } from './linkedin.shared'
+import { get } from 'http'
 
 export * from './linkedin.class'
 export * from './linkedin.schema'
@@ -50,7 +51,7 @@ export const linkedin = (app: Application) => {
         authenticate('jwt'),
 				// useCustomAuthHeader('auth_header'),
         schemaHooks.resolveExternal(linkedinExternalResolver),
-        schemaHooks.resolveResult(linkedinResolver)
+        schemaHooks.resolveResult(linkedinResolver),
       ]
     },
     before: {
@@ -79,9 +80,43 @@ export const linkedin = (app: Application) => {
   })
 }
 
+export const linkedinDashboard = (app: Application) => {
+	app.use(linkedinDashboardPath, new LinkedinDashboardService(getOptions(app)), {
+		// A list of all methods this service exposes externally
+		methods: linkedinDashboardMethods,
+
+		events: []
+	})
+
+	app.service(linkedinDashboardPath).hooks({
+		around: {
+			all: [
+				authenticate('jwt'),
+				// useCustomAuthHeader('auth_header'),
+				// schemaHooks.resolveExternal(linkedinExternalResolver),
+				// schemaHooks.resolveResult(linkedinResolver),
+			]
+		},
+		before: {
+			all: [
+				// schemaHooks.validateQuery(linkedinQueryValidator),
+				// schemaHooks.resolveQuery(linkedinQueryResolver)
+			],
+			find: []
+		},
+		after: {
+			all: []
+		},
+		error: {
+			all: []
+		}
+	})
+}
+
 // Add this service to the service type index
 declare module '../../declarations' {
   interface ServiceTypes {
     [linkedinPath]: LinkedinService
+		[linkedinDashboardPath]: LinkedinDashboardService
   }
 }

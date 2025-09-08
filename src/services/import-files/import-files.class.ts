@@ -311,7 +311,9 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 				wordProficiencyLevel: this.s(row[headers[106]]) ?? undefined,
 				excelProficiencyLevel: this.s(row[headers[107]]) ?? undefined,
 				powerPointProficiencyLevel: this.s(row[headers[108]]) ?? undefined,
-				importedFilesId: importedFilesId
+				importedFilesId: importedFilesId,
+
+				createdAt: new Date().toISOString()
 			};
 		});
 
