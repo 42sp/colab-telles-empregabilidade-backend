@@ -12,7 +12,6 @@ import 'dotenv/config';
 import configuration from '@feathersjs/configuration'
 import socketio from '@feathersjs/socketio'
 import { setupScrapOperationsCron } from "./jobs/scrapOperationsCron";
-
 import type { Application } from './declarations'
 import { configurationValidator, configAuthentication } from './configuration'
 import { logger } from './logger'

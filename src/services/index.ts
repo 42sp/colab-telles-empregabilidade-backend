@@ -1,3 +1,5 @@
+import { linkedin, linkedinDashboard } from './linkedin/linkedin'
+import { glassdoor } from './glassdoor/glassdoor'
 import { importedFiles } from './imported-files/imported-files'
 import { importFiles } from './import-files/import-files'
 import { conversions } from './conversions/conversions'
@@ -9,6 +11,9 @@ import { scrapOperations } from './scrap_operations/scrapOperations'
 import type { Application } from '../declarations'
 
 export const services = (app: Application) => {
+  app.configure(linkedin)
+  app.configure(linkedinDashboard)
+  app.configure(glassdoor)
   app.configure(importedFiles)
   app.configure(importFiles)
   app.configure(conversions)
