@@ -1,5 +1,6 @@
 import type { HookContext } from '@feathersjs/feathers'
 import { getScrapOperationsDataValidator } from './scrapOperations.validator'
+import { logger } from '../../logger'
 
 const scrapOperationsDataValidator = getScrapOperationsDataValidator()
 
@@ -10,16 +11,25 @@ export default {
         try {
           await scrapOperationsDataValidator.create(context.data)
         } catch (err: any) {
+          logger.error('[scrap-operations][before.create] Falha na validação', {
+            error: err.message,
+            data: context.data
+          })
           throw err
         }
 
-        // Injeta defaults
         context.data = {
           ...context.data,
           status: 'Agendado',
           started_at: null,
           finished_at: null
         }
+
+        logger.info('[scrap-operations][before.create] Nova operação agendada', {
+          user: context.params?.user || 'anonymous',
+          name: context.data.name
+        })
+
         return context
       }
     ],
@@ -28,6 +38,10 @@ export default {
         try {
           await scrapOperationsDataValidator.update(context.data)
         } catch (err: any) {
+          logger.error('[scrap-operations][before.update] Falha na validação', {
+            error: err.message,
+            id: context.id
+          })
           throw err
         }
         return context
@@ -35,26 +49,16 @@ export default {
     ],
     patch: [
       async (context: HookContext) => {
-        // 1. Captura source/user do data OU dos params
         const source =
-          context.data?._source ||
-          context.params?.source ||
-          context.params?.query?.$source ||
-          'unknown'
+          context.data?._source || context.params?.source || context.params?.query?.$source || 'unknown'
 
         const user =
-          context.data?._user ||
-          context.params?.user ||
-          context.params?.headers?.user ||
-          'anonymous'
+          context.data?._user || context.params?.user || context.params?.headers?.user || 'anonymous'
 
-        //console.log('[HOOK before.patch] capturado:', { source, user })
-
-        // 2. Remove campos de controle do payload (não vão para o DB)
+        // Sanitização
         if ('_source' in context.data) delete context.data._source
         if ('_user' in context.data) delete context.data._user
 
-        // 3. Lista de campos permitidos para persistir
         const allowedFields = [
           'name',
           'scheduled_date',
@@ -73,81 +77,57 @@ export default {
         ]
 
         context.data = Object.fromEntries(
-          Object.entries(context.data).filter(([key]) =>
-            allowedFields.includes(key)
-          )
+          Object.entries(context.data).filter(([key]) => allowedFields.includes(key))
         )
 
-        // 4. Ajusta scheduled_date se vier com timestamp
         if (context.data.scheduled_date?.includes('T')) {
           context.data.scheduled_date = context.data.scheduled_date.split('T')[0]
         }
 
-        // 5. Validação
         try {
-          const validator =
-            (await import('./scrapOperations.validator')).getScrapOperationsDataValidator()
+          const validator = (await import('./scrapOperations.validator')).getScrapOperationsDataValidator()
           await validator.patch(context.data)
         } catch (err: any) {
-          throw new Error(
-            'Falha na validação do patch: ' + JSON.stringify(err.errors || err)
-          )
+          logger.error('[scrap-operations][before.patch] Falha na validação', {
+            error: err.message,
+            id: context.id
+          })
+          throw new Error('Falha na validação do patch: ' + JSON.stringify(err.errors || err))
         }
 
-        // 6. Injeta novamente em params (não vai pro banco)
-        context.params = {
-          ...context.params,
+        context.params.source = source
+        context.params.user = user
+
+        logger.debug('[scrap-operations][before.patch] Patch preparado', {
+          id: context.id,
           source,
-          user
-        }
-        //console.log('[TEST before.patch] context.params:', context.params)
-        //console.log('[TEST before.patch] context.data:', context.data)
-        //console.log(
-        //  '[HOOK before.patch] context.params.source:',
-        //  context.params?.source
-        //)
+          user,
+          fields: Object.keys(context.data)
+        })
+
         return context
       }
     ],
     remove: []
   },
   after: {
-    all: [],
-    find: [],
-    get: [],
-    create: [],
-    update: [],
     patch: [
       async (context: HookContext) => {
         const result = context.result
         const source = context.params?.source || 'system'
         const user = context.params?.user || 'anonymous'
 
-        // Garante que _source/_user vão no payload do WS (não no banco)
         context.dispatch = { ...result, _source: source, _user: user }
 
-        //console.log('[TEST after.patch] context.result:', context.result)
-        //console.log(
-        //   '[TEST after.patch] context.params.source:',
-        //   context.params?.source
-        // )
-        // console.log(
-        //   '[HOOK after.patch] Enviando dispatch com _source:',
-        //   context.dispatch
-        // )
+        logger.info('[scrap-operations][after.patch] Patch concluído', {
+          id: context.id,
+          source,
+          user,
+          status: result?.status
+        })
 
         return context
       }
-    ],
-    remove: []
-  },
-  error: {
-    all: [],
-    find: [],
-    get: [],
-    create: [],
-    update: [],
-    patch: [],
-    remove: []
+    ]
   }
 }

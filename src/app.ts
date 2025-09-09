@@ -22,6 +22,7 @@ import { authentication } from './authentication'
 import { services } from './services/index'
 import { channels } from './channels'
 
+
 const app: Application = express(feathers())
 
 // Load app configuration

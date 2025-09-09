@@ -11,6 +11,8 @@ import type {
   ScrapOperationsQuery
 } from './scrapOperations.schema'
 
+import { logger } from '../../logger'
+
 // 🔹 Tipo extendido incluindo _source
 type ScrapOpWithSource = ScrapOperations & { _source?: 'cronjob' | 'user' | 'unknown' }
 
@@ -36,30 +38,14 @@ export class ScrapOperationsService extends KnexService<
   async find(
     params?: ScrapOperationsParams
   ): Promise<Paginated<ScrapOperations> | ScrapOperations[]> {
-    //console.log('[SVC][FIND->] params.query:', params?.query)
-
-    let result: Paginated<ScrapOperations> | ScrapOperations[]
-
-    if (params?.query?.type === 'active') {
-      result = await super.find({
-        ...params,
-        query: { ...params.query, status: 'Agendado', $sort: { scheduled_date: 1 } }
-      })
-    } else if (params?.query?.type === 'history') {
-      result = await super.find({
-        ...params,
-        query: {
-          ...params.query,
-          $or: [{ status: { $ne: 'Agendado' } }, { deleted: true }],
-          $sort: { started_at: -1 }
-        }
-      })
-    } else {
-      result = await super.find(params as any)
-    }
-
+    const result = await super.find(params as any)
     const count = Array.isArray(result) ? result.length : result.total
-    //console.log('[SVC][FIND<-] ok, count:', count)
+
+    logger.debug("[ScrapOpsService] find executed", {
+      queryType: params?.query?.type || "default",
+      count
+    })
+
     return result
   }
 
@@ -78,9 +64,12 @@ export class ScrapOperationsService extends KnexService<
     data: ScrapOperationsData | ScrapOperationsData[],
     params?: ScrapOperationsParams
   ): Promise<ScrapOpWithSource | ScrapOpWithSource[]> {
-    //console.log('[SVC][CREATE->] source:', params?.source ?? 'unknown')
-
     const result = await super.create(data as any, params)
+
+    logger.info("[ScrapOpsService] create", {
+      source: params?.source ?? "unknown",
+      isArray: Array.isArray(data)
+    })
 
     if (Array.isArray(result)) {
       return result.map(item => ({ ...(item as ScrapOperations), _source: params?.source ?? 'unknown' }))
@@ -103,29 +92,33 @@ export class ScrapOperationsService extends KnexService<
     params?: ScrapOperationsParams
   ): Promise<ScrapOpWithSource>
   async patch(
-  id: string | number | null,
-  data: Partial<ScrapOperationsData>,
-  params?: ScrapOperationsParams
-): Promise<ScrapOpWithSource | ScrapOpWithSource[]> {
-  const source =
-    params?.source || (params?.query as any)?.$source || 'unknown';
-  
-  //console.log('[SVC][PATCH->] id:', id, 'source capturado:', source, 'data:', data);
+    id: string | number | null,
+    data: Partial<ScrapOperationsData>,
+    params?: ScrapOperationsParams
+  ): Promise<ScrapOpWithSource | ScrapOpWithSource[]> {
+    const source =
+      params?.source || (params?.query as any)?.$source || 'unknown'
 
-  const result = await super.patch(id as any, data, params);
+    logger.info("[ScrapOpsService] patch", {
+      id: id ?? "multiple",
+      source,
+      fields: Object.keys(data)
+    })
 
-  if (Array.isArray(result)) {
-    return result.map(item => ({
-      ...(item as ScrapOperations),
-      _source: source
-    }));
-  } else {
-    return {
-      ...(result as ScrapOperations),
-      _source: source
-    };
+    const result = await super.patch(id as any, data, params)
+
+    if (Array.isArray(result)) {
+      return result.map(item => ({
+        ...(item as ScrapOperations),
+        _source: source
+      }))
+    } else {
+      return {
+        ...(result as ScrapOperations),
+        _source: source
+      }
+    }
   }
-}
 
   // ------------------------------
   // REMOVE
@@ -142,7 +135,10 @@ export class ScrapOperationsService extends KnexService<
     id: string | number | null,
     params?: ScrapOperationsParams
   ): Promise<ScrapOpWithSource | ScrapOpWithSource[]> {
-    //console.log('[SVC][REMOVE->]', { id, source: params?.source ?? 'unknown' })
+    logger.info("[ScrapOpsService] remove", {
+      id: id ?? "multiple",
+      source: params?.source ?? "unknown"
+    })
 
     const result = await super.remove(id as any, params)
 

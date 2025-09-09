@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import type { Application } from "../declarations";
 import type { ScrapOperations, ScrapOperationsPatch } from "../services/scrap_operations/scrapOperations.schema";
+import { logger } from "../logger";
 
 const APP_TZ = "America/Sao_Paulo";
 
@@ -10,84 +11,85 @@ export function setupScrapOperationsCron(app: Application) {
     patch(id: number, data: ScrapOperationsPatch, params?: any): Promise<ScrapOperations>;
   };
 
-  // Cronjob rodando a cada minuto
   cron.schedule(
     "* * * * *",
     async () => {
       const now = new Date();
 
-      // Calcula intervalo de 1 minuto
       const checkStart = new Date(now);
       checkStart.setSeconds(0, 0);
       const checkEnd = new Date(checkStart);
       checkEnd.setMinutes(checkEnd.getMinutes() + 1);
 
-      // console.log(
-      //   `[Cron] Verificando operações entre ${checkStart.toLocaleTimeString("pt-BR", {
-      //     timeZone: APP_TZ,
-      //   })} e ${checkEnd.toLocaleTimeString("pt-BR", { timeZone: APP_TZ })}`
-      // );
+      logger.debug("[Cron] Tick started", {
+        interval: `${checkStart.toISOString()} - ${checkEnd.toISOString()}`
+      })
 
       try {
-        // Busca operações agendadas
         const operations: ScrapOperations[] = await service.find({
           query: { status: "Agendado", deleted: false },
           paginate: false,
         });
 
-        //console.log(`[Cron] Encontradas ${operations.length} operações agendadas`);
+        if (operations.length > 0) {
+          logger.info("[Cron] Found scheduled operations", {
+            count: operations.length
+          })
+        }
 
         for (const op of operations) {
-          // Converte scheduled_date para Date
           let scheduledDate: Date;
           try {
             scheduledDate = new Date(op.scheduled_date);
             if (isNaN(scheduledDate.getTime())) {
               throw new Error("Data inválida");
             }
-          } catch (error) {
-            //console.warn(`[Cron] scheduled_date inválido para operação ${op.id}:`, op.scheduled_date);
+          } catch {
+            logger.warn("[Cron] Invalid scheduled_date", {
+              operationId: op.id,
+              value: op.scheduled_date
+            })
             continue;
           }
 
-          // Extrai hora e minuto
           const [hour, minute] = op.scheduled_time?.split(":").map(Number) ?? [0, 0];
-
-          // Combina date + time
           const scheduled = new Date(scheduledDate);
           scheduled.setHours(hour, minute, 0, 0);
 
-          // Verifica se operação deve ser executada no intervalo
           if (scheduled >= checkStart && scheduled < checkEnd) {
-            //console.log(`[Cron] Executando operação ${op.id} (${op.name})`);
+            logger.info("[Cron] Executing operation", {
+              operationId: op.id,
+              name: op.name
+            })
 
             try {
-              // Marca como "Em Execução"
               await service.patch(
                 op.id,
                 {
                   status: "Em Execução",
                   started_at: new Date().toISOString(),
                 },
-                { source: "cronjob" } // 🔹 Aqui marcamos a origem
+                { source: "cronjob" }
               );
 
-              // === Lógica real da operação ===
-              await new Promise((res) => setTimeout(res, 2000)); // Simulação de scrap
+              await new Promise((res) => setTimeout(res, 2000)); // simulação
 
-              // Marca como "Concluído"
               await service.patch(
                 op.id,
                 {
                   status: "Concluído",
                   finished_at: new Date().toISOString(),
                 },
-                { source: "cronjob" } // 🔹 Sempre indicar a origem
+                { source: "cronjob" }
               );
 
-              //console.log(`[Cron] Operação ${op.id} concluída`);
+              logger.info("[Cron] Operation finished", { operationId: op.id })
             } catch (err: any) {
-              //console.error(`[Cron] Erro na operação ${op.id}:`, err);
+              logger.error("[Cron] Operation failed", {
+                operationId: op.id,
+                error: err.message
+              })
+
               await service.patch(
                 op.id,
                 {
@@ -95,17 +97,19 @@ export function setupScrapOperationsCron(app: Application) {
                   error_message: err.message,
                   finished_at: new Date().toISOString(),
                 },
-                { source: "cronjob" } // 🔹 Falha também vem marcada
+                { source: "cronjob" }
               );
             }
           }
         }
       } catch (err: any) {
-        //console.error("[Cron] Erro ao buscar operações agendadas:", err);
+        logger.error("[Cron] Failed to fetch scheduled operations", {
+          error: err.message
+        })
       }
     },
     { timezone: APP_TZ }
   );
 
-  //console.log("[Cron] Scheduler iniciado para operações scrap");
+  logger.info("[Cron] Scheduler started", { timezone: APP_TZ })
 }
