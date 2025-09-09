@@ -1,4 +1,3 @@
-// For more information about this file see https://dove.feathersjs.com/guides/cli/application.html
 import { feathers } from '@feathersjs/feathers'
 import express, {
   rest,
@@ -12,7 +11,7 @@ import express, {
 import 'dotenv/config';
 import configuration from '@feathersjs/configuration'
 import socketio from '@feathersjs/socketio'
-
+import { setupScrapOperationsCron } from "./jobs/scrapOperationsCron";
 import type { Application } from './declarations'
 import { configurationValidator, configAuthentication } from './configuration'
 import { logger } from './logger'
@@ -26,47 +25,69 @@ const app: Application = express(feathers())
 
 // Load app configuration
 app.configure(configuration(configurationValidator))
-app.use(cors())
+
+// -------------------------
+// CORS seguro
+// -------------------------
+const ENV = process.env.NODE_ENV || 'development'
+
+const corsOptions = {
+  origin: ENV === 'production'
+    ? ['https://colab-telles-empregabilidade-frontend.onrender.com'] // frontend produção
+    : ['http://localhost:5173'], // frontend dev
+  credentials: true
+}
+
+// Aplica CORS no Express (REST)
+app.use(cors(corsOptions))
 app.use(json())
 app.use(urlencoded({ extended: true }))
+
 // Host the public folder
 app.use('/', serveStatic(app.get('public')))
 
-// console.log('DATABASE_URL', process.env.DATABASE_URL)
-
-// Configure services and real-time functionality
+// -------------------------
+// REST e WebSocket
+// -------------------------
 app.configure(rest())
 app.configure(
   socketio({
-    cors: {
-      origin: app.get('origins')
-    }
+    cors: corsOptions // aplica CORS no Socket.IO também
   })
 )
+
 app.configure(postgresql)
 app.set('authentication', configAuthentication)
 app.configure(authentication)
 
 app.configure(services)
+
+// Logging de todas as requisições
+app.use((req, res, next) => {
+  console.log('Request:', req.method, req.url)
+  next()
+})
+
 app.configure(channels)
 
 // Configure a middleware for 404s and the error handler
 app.use(notFound())
 app.use(errorHandler({ logger }))
 
-// Register hooks that run on all service methods
+// Hooks globais
 app.hooks({
-  around: {
-    all: [logError]
-  },
+  around: { all: [logError] },
   before: {},
   after: {},
   error: {}
 })
-// Register application setup and teardown hooks here
+
 app.hooks({
   setup: [],
   teardown: []
 })
+
+// Inicia cron jobs
+setupScrapOperationsCron(app);
 
 export { app }

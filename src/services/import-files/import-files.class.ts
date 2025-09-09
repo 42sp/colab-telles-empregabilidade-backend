@@ -7,6 +7,8 @@ import type { Application } from '../../declarations'
 import type { ImportFiles, ImportFilesData, ImportFilesPatch, ImportFilesQuery } from './import-files.schema'
 
 import * as XLSX from 'xlsx';
+import { ImportedFiles } from '../imported-files/imported-files'
+import { useServices } from '../../hooks/useServices'
 
 export type { ImportFiles, ImportFilesData, ImportFilesPatch, ImportFilesQuery }
 
@@ -36,13 +38,43 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 		const file = params?.file || (params as any)?.files?.file || (params as any)?.files?.[0];
 		if (!file) throw new Error('Nenhum arquivo enviado');
 
-		await this.insertBdGeral(file);
-		await this.insertConversionsData(file);
+		const trx = await this.Model.transaction();
 
-		return { status: 'OK', message: `${file.originalname} processado com sucesso!` };
+		try
+		{
+			const id = await this.insertImportedFile(file, String(params?.user?.id ?? ''));
+			const insertBdGeralRetorno = await this.insertBdGeral(file, id, params?.authentication?.accessToken);
+			await this.insertConversionsData(file, id);
+			await this.insertLinkedIn(insertBdGeralRetorno.dbGeralData, insertBdGeralRetorno.studentsId, params?.authentication?.accessToken);
+
+			await trx.commit();
+
+			return { status: 'OK', message: `${file.originalname} processado com sucesso!` };
+		}
+		catch(err: any)
+		{
+			await trx.rollback();
+			throw err;
+		}
 	}
 
-	async insertConversionsData(file: FileParams) {
+	async insertImportedFile(file: FileParams, userId: string) {
+		const obj = {
+			fileName: file.originalname,
+			importationDate: new Date().toISOString(),
+			userId: userId
+		 } as ImportedFiles;
+
+		const result = await this.Model('imported-files').insert(obj).returning(['id']);
+
+		if (!result) {
+			throw new Error('Erro ao inserir arquivo importado.');
+		}
+
+		return result[0].id ?? null;
+	}
+
+	async insertConversionsData(file: FileParams, importedFilesId: number) {
 		const workbook = XLSX.read(file.buffer, { type: 'buffer' });
 		const sheetName = workbook.SheetNames.find(name => name.toLowerCase() === 'conversão');
 		if (!sheetName) throw new Error('Aba "conversão" não encontrada');
@@ -92,6 +124,7 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 				automaticVerificationFormula: this.s(row['Fórmula - verificação automática']),
 				automaticVerification: row['Verificação Automática'] === 'Sim',
 				timeValidation: row['Validação - Tempo'] === 'Sim',
+				importedFilesId: importedFilesId
 			};
 		}).filter(item => (
 			item &&
@@ -111,7 +144,16 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 		}
 	}
 
-	async insertBdGeral(file: FileParams) {
+	async insertLinkedIn(dbGeralData: any[], studentsId: number, accessToken?: string) {
+		const $service = useServices();
+
+		const searchLinkedInResponse = await $service.searchLinkedIn(
+			{ urls: dbGeralData.map(m => ({ url: m.linkedin })) },
+			String(accessToken)
+		);
+	}
+
+	async insertBdGeral(file: FileParams, importedFilesId: number, accessToken?: string) {
 		const workbook = XLSX.read(file.buffer, { type: 'buffer' });
 		const sheetName = workbook.SheetNames.find(name => name.toLowerCase() === 'bd_geral');
 		if (!sheetName) throw new Error('Aba "bd_geral" não encontrada');
@@ -268,7 +310,10 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 				officePackageKnowledge: this.toBool(row[headers[105]]) ?? undefined,
 				wordProficiencyLevel: this.s(row[headers[106]]) ?? undefined,
 				excelProficiencyLevel: this.s(row[headers[107]]) ?? undefined,
-				powerPointProficiencyLevel: this.s(row[headers[108]]) ?? undefined
+				powerPointProficiencyLevel: this.s(row[headers[108]]) ?? undefined,
+				importedFilesId: importedFilesId,
+
+				createdAt: new Date().toISOString()
 			};
 		});
 
@@ -276,10 +321,17 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 			throw new Error('Nenhuma linha válida encontrada para importação. Verifique o arquivo.');
 		}
 
-		const result = await this.Model('students').insert(dbGeralData);
+		const result = await this.Model('students').insert(dbGeralData).returning(['id']);
 
 		if (!result) {
 			throw new Error('Erro ao inserir dados de students.');
+		}
+
+		const studentsId = result[0].id ?? null;
+
+		return {
+			studentsId,
+			dbGeralData
 		}
 	}
 
