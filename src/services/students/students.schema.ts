@@ -11,7 +11,7 @@ export const studentsSchema = {
   $id: 'Students',
   type: 'object',
   additionalProperties: false,
-  required: ['name', 'email', 'cpf', 'celphone','linkedin'],
+  required: ['name', 'email', 'cpf', 'celphone', 'linkedin'],
   properties: {
     name: { type: 'string' },
     email: { type: 'string' },
@@ -137,7 +137,7 @@ export const studentsDataSchema = {
   $id: 'StudentsData',
   type: 'object',
   additionalProperties: false,
-  required: ['name', 'email', 'cpf', 'celphone','linkedin'],
+  required: ['name', 'email', 'cpf', 'celphone', 'linkedin'],
   properties: {
     ...studentsSchema.properties
   }
@@ -151,7 +151,7 @@ export const studentsPatchSchema = {
   $id: 'StudentsPatch',
   type: 'object',
   additionalProperties: false,
-  required: ['name', 'email', 'cpf', 'celphone','linkedin'],
+  required: ['name', 'email', 'cpf', 'celphone', 'linkedin'],
   properties: {
     ...studentsSchema.properties
   }
@@ -166,7 +166,12 @@ export const studentsQuerySchema = {
   type: 'object',
   additionalProperties: false,
   properties: {
-    ...querySyntax(studentsSchema.properties)
+    ...querySyntax(studentsSchema.properties,
+      Object.fromEntries(
+      Object.entries(studentsSchema.properties)
+        .filter(([_, value]) => value.type === 'string')
+        .map(([key]) => [key, { $ilike: true, $like: true, $in: true }]))
+    )
   }
 } as const
 export type StudentsQuery = FromSchema<typeof studentsQuerySchema>
