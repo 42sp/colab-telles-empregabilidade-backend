@@ -7,6 +7,8 @@ import type { ScrapOperations } from './services/scrap_operations/scrapOperation
 import type { ScrapOperationsService } from './services/scrap_operations/scrapOperations.class' // <- pega a classe
 
 import { User } from './services/users/users'
+import { statsPath } from 'services/stats/stats.shared'
+import { StudentsStats } from 'services/stats/stats.class'
 
 export type { NextFunction }
 
@@ -16,6 +18,7 @@ export interface Configuration extends ApplicationConfiguration {}
 // A mapping of service names to types. Definido com o tipo da service class (não dos dados em si)
 export interface ServiceTypes {
   [scrapOperationsPath]: ScrapOperationsService
+  [statsPath]: StudentsStats
 }
 
 // The application instance type that will be used everywhere else
