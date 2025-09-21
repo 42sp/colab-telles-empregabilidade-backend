@@ -10,14 +10,10 @@ import type { StudentsService } from './students.class'
 export const studentsSchema = {
   $id: 'Students',
   type: 'object',
-  additionalProperties: false,
-  required: ['name', 'email', 'cpf', 'celphone','linkedin'],
+  additionalProperties: true,
+  required: ['name'],
   properties: {
     name: { type: 'string' },
-    email: { type: 'string' },
-    cpf: { type: 'string' },
-    celphone: { type: 'string' },
-    linkedin: { type: 'string' },
   }
 } as const
 export type Students = FromSchema<typeof studentsSchema>
@@ -30,8 +26,8 @@ export const studentsExternalResolver = resolve<Students, HookContext<StudentsSe
 export const studentsDataSchema = {
   $id: 'StudentsData',
   type: 'object',
-  additionalProperties: false,
-  required: ['name', 'email', 'cpf', 'celphone','linkedin'],
+  additionalProperties: true,
+  required: ['name'],
   properties: {
     ...studentsSchema.properties
   }
@@ -44,8 +40,8 @@ export const studentsDataResolver = resolve<StudentsData, HookContext<StudentsSe
 export const studentsPatchSchema = {
   $id: 'StudentsPatch',
   type: 'object',
-  additionalProperties: false,
-  required: ['name', 'email', 'cpf', 'celphone','linkedin'],
+  additionalProperties: true,
+  required: ['name'],
   properties: {
     ...studentsSchema.properties
   }
@@ -58,7 +54,7 @@ export const studentsPatchResolver = resolve<StudentsPatch, HookContext<Students
 export const studentsQuerySchema = {
   $id: 'StudentsQuery',
   type: 'object',
-  additionalProperties: false,
+  additionalProperties: true,
   properties: {
     ...querySyntax(studentsSchema.properties)
   }
