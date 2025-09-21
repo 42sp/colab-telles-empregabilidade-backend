@@ -5,13 +5,11 @@ import type { KnexAdapterParams, KnexAdapterOptions } from '@feathersjs/knex'
 
 import type { Application } from '../../declarations'
 import type { Linkedin, LinkedinData, LinkedinPatch, LinkedinQuery } from './linkedin.schema'
-import { link } from 'fs'
 
 export type { Linkedin, LinkedinData, LinkedinPatch, LinkedinQuery }
 
 export interface LinkedinParams extends KnexAdapterParams<LinkedinQuery> {}
 
-// By default calls the standard Knex adapter service methods but can be customized with your own functionality.
 export class LinkedinService<ServiceParams extends Params = LinkedinParams> extends KnexService<
   Linkedin,
   LinkedinData,
@@ -25,21 +23,29 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
 		{
 			const dataArray = Array.isArray(data) ? data : [data];
 
+			if (!dataArray || dataArray.length === 0) {
+				return { status: 'OK', message: 'Nenhum dado para processar.' };
+			}
+
 			const createdAt = new Date().toISOString();
 
 			for (let item of dataArray)
 			{
-				let result = undefined;
+				if (!item || !item["id"]) {
+					console.warn('Skipping item without valid id:', item);
+					continue;
+				}
+
 				const current_company = item["current_company"] as { name?: string; title?: string } | undefined;
 
-				const student = await this.Model('students')
+				const student = await trx('students')
 					.whereLike('linkedin', `%${item["id"]}%`)
 					.first();
 
 				if (student)
 				{
-					result = {
-						studentId: student ? student.id : null,
+					const result = {
+						studentId: student.id,
 						company_name: current_company?.name ?? "",
 						current_position: current_company?.title ?? "",
 						timestamp: item["timestamp"],
@@ -48,14 +54,13 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
 						is_working: current_company?.name ? true : false,
 						createdAt
 					};
+
+					const resultLinkedIn = await trx('linkedin').insert(result);
+
+					if (!resultLinkedIn) {
+						throw new Error('Erro ao inserir dados de linkedin.');
+					}
 				}
-
-				const resultLinkedIn = await this.Model('linkedin').insert(result);
-
-				if (!resultLinkedIn) {
-					throw new Error('Erro ao inserir dados de linkedin.');
-				}
-
 			}
 
 			await trx.commit();

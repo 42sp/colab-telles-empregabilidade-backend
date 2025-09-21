@@ -58,6 +58,8 @@ export default class Service {
 				params += '&uncompressed_webhook=true';
 			}
 
+			console.log(params)
+
 			const response = await this.$brightdata.post(`/datasets/v3/trigger${params}`, data.urls);
 
 			console.log(response.data);
