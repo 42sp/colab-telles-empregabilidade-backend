@@ -203,7 +203,7 @@ export class LinkedinDashboardService<ServiceParams extends Params = LinkedinPar
 					: ''
 			})),
 			sectorDistribution: sectorDistributionRaw.map(item => ({
-				name: item.name,
+				name: item.name ? item.name : 'Não Consta',
 				value: Number(item.value)
 			})),
 			statusSync: {
