@@ -1,10 +1,21 @@
-// For more information about this file see https://dove.feathersjs.com/guides/cli/logging.html
 import { createLogger, format, transports } from 'winston'
 
-// Configure the Winston logger. For the complete documentation see https://github.com/winstonjs/winston
 export const logger = createLogger({
-  // To see more detailed errors, change this to 'debug'
-  level: 'info',
-  format: format.combine(format.splat(), format.simple()),
+  // Níveis de Debug - Mostra o nível selecionado e todos acima dele na lista
+  //   error  → sempre mostrar
+  //   warn   → só aparece se level <= warn
+  //   info   → só aparece se level <= info
+  //   http   → idem (se configurado)
+  //   verbose
+  //   debug
+  //   silly  → logs mais detalhados
+  level: process.env.LOG_LEVEL || 'debug',
+  format: format.combine(
+    format.colorize(),
+    format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    format.printf(({ timestamp, level, message, ...meta }) => {
+      return `[${timestamp}] ${level}: ${message} ${Object.keys(meta).length ? JSON.stringify(meta) : ''}`
+    })
+  ),
   transports: [new transports.Console()]
 })
