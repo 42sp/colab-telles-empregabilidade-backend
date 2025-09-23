@@ -1,6 +1,10 @@
 import { Knex } from "knex";
 
 export async function up(knex: Knex): Promise<void> {
+
+  // Garante que a tabela antiga será removida antes de criar a nova
+  await knex.schema.dropTableIfExists("scrap_operations");
+
   // Habilita extensão pgcrypto (se ainda não tiver)
   await knex.raw(`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`);
 
