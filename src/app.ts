@@ -33,10 +33,24 @@ app.configure(configuration(configurationValidator))
 const ENV = process.env.NODE_ENV || 'development'
 
 const corsOptions = {
+<<<<<<< HEAD
   origin: [
     'https://colab-telles-empregabilidade-frontend.onrender.com',
     'https://temp-empregabilidade-frontend.eorpdr.easypanel.host'
   ],
+=======
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    const whitelist = [
+      'https://colab-telles-empregabilidade-frontend.onrender.com',
+      'https://temp-empregabilidade-frontend.eorpdr.easypanel.host'
+    ];
+    if (!origin || whitelist.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+>>>>>>> 6095340312eeb5581a9e144ae865ac33501012a9
   credentials: true,
   methods: ['GET','POST','PATCH','PUT','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization']
