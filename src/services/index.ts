@@ -9,6 +9,7 @@ import { scrapOperations } from './scrap_operations/scrapOperations'
 
 // For more information about this file see https://dove.feathersjs.com/guides/cli/application.html#configure-functions
 import type { Application } from '../declarations'
+import { stats } from './stats/stats'
 
 export const services = (app: Application) => {
   app.configure(linkedin)
@@ -20,4 +21,5 @@ export const services = (app: Application) => {
   app.configure(students)
   app.configure(user)
   app.configure(scrapOperations)
+  app.configure(stats)
 }
