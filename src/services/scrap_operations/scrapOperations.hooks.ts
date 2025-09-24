@@ -116,7 +116,8 @@ export default {
         const result = context.result
         const source = context.params?.source || 'system'
         const user = context.params?.user || 'anonymous'
-
+        
+        logger.info("[scrap-operations][after.patch] Dispatch:", context.dispatch)
         context.dispatch = { ...result, _source: source, _user: user }
 
         logger.info('[scrap-operations][after.patch] Patch concluído', {

@@ -33,16 +33,22 @@ app.configure(configuration(configurationValidator))
 const ENV = process.env.NODE_ENV || 'development'
 
 const corsOptions = {
-  origin: ENV === 'production'
-    ? ['https://colab-telles-empregabilidade-frontend.onrender.com', 'https://temp-empregabilidade-frontend.eorpdr.easypanel.host'] // frontend produção
-    : ['http://localhost:5173'], // frontend dev
-  credentials: true
-}
+  origin: [
+    'https://colab-telles-empregabilidade-frontend.onrender.com',
+    'https://temp-empregabilidade-frontend.eorpdr.easypanel.host'
+  ],
+  credentials: true,
+  methods: ['GET','POST','PATCH','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization']
+};
+
 
 // Aplica CORS no Express (REST)
 app.use(cors(corsOptions))
-app.use(json())
-app.use(urlencoded({ extended: true }))
+app.options('*', cors(corsOptions));
+app.use(json({ limit: '10mb' }))
+app.use(urlencoded({ extended: true, limit: '10mb' }))
+
 
 // Host the public folder
 app.use('/', serveStatic(app.get('public')))
@@ -53,9 +59,16 @@ app.use('/', serveStatic(app.get('public')))
 app.configure(rest())
 app.configure(
   socketio({
-    cors: corsOptions // aplica CORS no Socket.IO também
+    cors: {
+      origin: [
+        'https://colab-telles-empregabilidade-frontend.onrender.com',
+        'https://temp-empregabilidade-frontend.eorpdr.easypanel.host'
+      ],
+      methods: ['GET', 'POST'],
+      credentials: true
+    }
   })
-)
+);
 
 app.configure(postgresql)
 app.set('authentication', configAuthentication)
