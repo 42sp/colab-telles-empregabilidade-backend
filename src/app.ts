@@ -34,7 +34,10 @@ const ENV = process.env.NODE_ENV || 'development'
 
 const corsOptions = {
   origin: ENV === 'production'
-    ? ['https://colab-telles-empregabilidade-frontend.onrender.com'] // frontend produção
+    ? ['https://colab-telles-empregabilidade-frontend.onrender.com',
+      'https://temp-empregabilidade-frontend.eorpdr.easypanel.host'
+      
+    ] // frontend produção
     : ['http://localhost:5173'], // frontend dev
   credentials: true
 }
