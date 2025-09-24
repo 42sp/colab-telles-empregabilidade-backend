@@ -50,20 +50,31 @@ export type StudentsPatch = FromSchema<typeof studentsPatchSchema>
 export const studentsPatchValidator = getValidator(studentsPatchSchema, dataValidator)
 export const studentsPatchResolver = resolve<StudentsPatch, HookContext<StudentsService>>({})
 
-// Schema for allowed query properties
 export const studentsQuerySchema = {
   $id: 'StudentsQuery',
   type: 'object',
   additionalProperties: true,
   properties: {
-    ...querySyntax(studentsSchema.properties,
+    ...querySyntax(
+      studentsSchema.properties,
       Object.fromEntries(
-      Object.entries(studentsSchema.properties)
-        .filter(([_, value]) => value.type === 'string')
-        .map(([key]) => [key, { $ilike: true, $like: true, $in: true }]))
+        Object.entries(studentsSchema.properties).map(([key, value]) => {
+          if (value.type === 'string') {
+            // Campos string: $ilike, $like, $in
+            return [key, { $ilike: true, $like: true, $in: true }];
+          } else if (value.type === 'number') {
+            // Campos number: $eq, $in
+            return [key, { $eq: true, $in: true }];
+          } else if (value.type === 'boolean') {
+            // Campos boolean: $eq
+            return [key, { $eq: true }];
+          }
+          return [key, {}]; // fallback
+        })
+      )
     )
   }
-} as const
+} as const;
 export type StudentsQuery = FromSchema<typeof studentsQuerySchema>
 export const studentsQueryValidator = getValidator(studentsQuerySchema, queryValidator)
 export const studentsQueryResolver = resolve<StudentsQuery, HookContext<StudentsService>>({})
