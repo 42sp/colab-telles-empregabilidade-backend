@@ -11,6 +11,7 @@ import { ImportedFiles } from '../imported-files/imported-files'
 import { useServices } from '../../hooks/useServices'
 import { BadRequest } from '@feathersjs/errors'
 import { Knex } from 'knex'
+import { link } from 'fs'
 
 export type { ImportFiles, ImportFilesData, ImportFilesPatch, ImportFilesQuery }
 
@@ -40,7 +41,7 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 		const file = params?.file || (params as any)?.files?.file || (params as any)?.files?.[0];
 		if (!file) throw new Error('Nenhum arquivo enviado');
 
-		const result = {
+		let result = {
 			status: 'OK',
 			message: ''
 		};
@@ -54,12 +55,17 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 			let studentsData = await this.insertBdGeral(file, id, trx, accessToken);
 			studentsData = await this.insertNameLinkedin(file, id, trx, accessToken);
 			await this.insertConversionsData(file, id, trx);
-			await this.postLinkedIn(studentsData.dbGeralData, params?.authentication?.accessToken);
+			result = await this.postLinkedIn(studentsData.dbGeralData, trx, params?.authentication?.accessToken);
 
 			// throw new Error("rollback");
-			await trx.commit();
-
-			result.message = `${file.originalname} processado com sucesso!`;
+			if (result.status === 'OK') {
+				await trx.commit();
+				result.message = `${file.originalname} processado com sucesso!`;
+			}
+			else {
+				await trx.rollback();
+				result.message = `${file.originalname} processado com erros: ${result.message}`;
+			}
 		}
 		catch(err: any)
 		{
@@ -171,7 +177,7 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 		return result;
 	}
 
-	async postLinkedIn(dbGeralData: any[], accessToken?: string) {
+	async postLinkedIn(dbGeralData: any[], trx: Knex.Transaction, accessToken?: string) {
 		const $service = useServices();
 
 		const result = {
@@ -181,16 +187,31 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 
 		try
 		{
-			const searchLinkedInResponse = await $service.searchLinkedIn(
-				{ urls: dbGeralData.map(m => ({ url: m.linkedin })) },
-				String(accessToken)
-			);
+			const chunkSize = 10;
+			for (let i = 0; i < dbGeralData.length; i += chunkSize) {
+				const chunk = dbGeralData.slice(i, i + chunkSize);
+				const response = await $service.searchLinkedIn(
+					{ urls: chunk.map(m => ({ url: m.linkedin })) },
+					String(accessToken)
+				);
+
+				if (response?.data?.snapshot_id)
+				{
+					await trx("snapshots").insert(chunk.map(m => (
+						{
+							linkedin: m.linkedin,
+							snapshot: response.data.snapshot_id
+						}
+					)));
+				}
+			}
 		}
 		catch(err: any) {
 			console.error('Erro ao buscar LinkedIn:', err);
 			result.status = 'ERROR';
 			result.message = err.message || 'Erro ao buscar dados do LinkedIn.';
 		}
+		return result;
 	}
 
 	async insertBdGeral(file: FileParams, importedFilesId: number, trx: Knex.Transaction, accessToken?: string) {

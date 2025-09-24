@@ -41,8 +41,8 @@ const corsOptions = {
 
 // Aplica CORS no Express (REST)
 app.use(cors(corsOptions))
-app.use(json())
-app.use(urlencoded({ extended: true }))
+app.use(json({ limit: '10mb' }))
+app.use(urlencoded({ extended: true, limit: '10mb' }))
 
 // Host the public folder
 app.use('/', serveStatic(app.get('public')))
