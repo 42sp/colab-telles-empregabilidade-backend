@@ -33,7 +33,7 @@ app.configure(configuration(configurationValidator))
 const ENV = process.env.NODE_ENV || 'development'
 
 const corsOptions = {
-  origin: (origin, callback) => {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     const whitelist = [
       'https://colab-telles-empregabilidade-frontend.onrender.com',
       'https://temp-empregabilidade-frontend.eorpdr.easypanel.host'
