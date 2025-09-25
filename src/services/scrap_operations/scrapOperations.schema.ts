@@ -50,14 +50,7 @@ export const scrapOperationsSchema = Type.Object(
     // ------------------------------
     // 🔹 Condições para scraping
     // ------------------------------
-    target_conditions: Type.Optional(
-      Type.Array(
-        Type.Object({
-          field: Type.String(),
-          value: Type.String()
-        })
-      )
-    ), /** Condições para filtrar dados no scraper */
+    target_conditions: Type.Optional(Type.String()), /** Agora aceita apenas string */
   },
   { additionalProperties: false }
 )
