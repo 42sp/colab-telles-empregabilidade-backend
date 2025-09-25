@@ -3,6 +3,7 @@ import { DateTime } from "luxon";
 import type { Application } from "../declarations";
 import type { ScrapOperations, ScrapOperationsPatch } from "../services/scrap_operations/scrapOperations.schema";
 import { logger } from "../logger";
+import { BrightDataService } from "../services/scrap_operations/brightDataService";
 
 const APP_TZ = "America/Sao_Paulo";
 
@@ -78,6 +79,8 @@ export function setupScrapOperationsCron(app: Application) {
 
         logger.info("[Cron] Checking scheduled operations", { count: operations.length });
 
+        const brightDataService = new BrightDataService(app);
+
         for (const op of operations) {
           if (!op.scheduled_date) {
             logger.warn("[Cron] Skipping operation without scheduled_date", { operationId: op.id });
@@ -89,7 +92,6 @@ export function setupScrapOperationsCron(app: Application) {
             hour, minute, second: 0, millisecond: 0
           });
 
-          // Janela de execução: 1 hora
           const executionWindowEnd = scheduled.plus({ hours: 1 });
 
           logger.debug("[Cron] Candidate operation", {
@@ -139,32 +141,45 @@ export function setupScrapOperationsCron(app: Application) {
               continue;
             }
 
-            const finished = await service.patch(
-              op.id,
-              { status: "Concluído", finished_at: DateTime.utc().toISO() },
-              { source: "cronjob" }
-            );
-
+            // 🔹 Aqui chamamos o BrightDataService
             try {
-              service.emit?.("patched", { ...(finished as any), _source: "cronjob", _user: "system" });
-            } catch (emitErr) {
-              logger.warn("[Cron] emit(patched) failed for finish", { operationId: op.id, error: String(emitErr) });
-            }
+              const brightDataResults = await brightDataService.runOperation(current as ScrapOperations);
 
-            logger.info("[Cron] Operation finished successfully", { operationId: op.id });
-          } catch (err: any) {
-            logger.error("[Cron] Operation failed", { operationId: op.id, error: err?.message ?? String(err) });
+              const finished = await service.patch(
+                op.id,
+                {
+                  status: "Concluído",
+                  finished_at: DateTime.utc().toISO(),
+                  result: brightDataResults
+                },
+                { source: "cronjob" }
+              );
 
-            try {
+              try {
+                service.emit?.("patched", { ...(finished as any), _source: "cronjob", _user: "system" });
+              } catch (emitErr) {
+                logger.warn("[Cron] emit(patched) failed for finish", { operationId: op.id, error: String(emitErr) });
+              }
+
+              logger.info("[Cron] Operation finished successfully", { operationId: op.id });
+
+            } catch (err: any) {
+              logger.error("[Cron] BrightData execution failed", { operationId: op.id, error: err?.message ?? String(err) });
+
               const failed = await service.patch(
                 op.id,
-                { status: "Falha", error_message: err?.message ?? String(err), finished_at: DateTime.utc().toISO() },
+                {
+                  status: "Falha",
+                  error_message: err?.message ?? String(err),
+                  finished_at: DateTime.utc().toISO()
+                },
                 { source: "cronjob" }
               );
               service.emit?.("patched", { ...(failed as any), _source: "cronjob", _user: "system" });
-            } catch (err2: any) {
-              logger.error("[Cron] Failed to mark operation as Falha", { operationId: op.id, error: err2?.message ?? String(err2) });
             }
+
+          } catch (err: any) {
+            logger.error("[Cron] Operation failed", { operationId: op.id, error: err?.message ?? String(err) });
           }
         }
       } catch (err: any) {
