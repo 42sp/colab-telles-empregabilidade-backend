@@ -22,7 +22,10 @@ export class BrightDataService {
    */
   public async analyzeTargetConditions(op: ScrapOperations) {
     if (!op.target_conditions || !Array.isArray(op.target_conditions)) {
-      logger.warn("[BrightDataService] Operation has no target_conditions or invalid format", { operationId: op.id });
+      logger.warn(
+        "[BrightDataService] Operation has no target_conditions or invalid format",
+        { operationId: op.id }
+      );
       return [];
     }
 
@@ -35,16 +38,16 @@ export class BrightDataService {
       let value: any = f.value;
 
       // Conversão automática de booleanos
-      const booleanFields = ["working", "enrolled"]; // adicione aqui outros campos booleanos
+      const booleanFields = ["working", "hasDisability"]; // campos booleanos
       if (booleanFields.includes(f.field)) {
-        if (value === "true") value = true;
-        else if (value === "false") value = false;
+        if (value === "true" || value === "Sim") value = true;
+        else if (value === "false" || value === "Não") value = false;
       }
 
       logger.debug("[BrightDataService] Applying filter", {
         field: f.field,
         originalValue: f.value,
-        parsedValue: value
+        parsedValue: value,
       });
 
       query = query.where(f.field, value);
@@ -52,7 +55,10 @@ export class BrightDataService {
 
     // Mostra a SQL gerada
     const sqlInfo = query.toSQL();
-    logger.debug("[BrightDataService] SQL query prepared", { sql: sqlInfo.sql, bindings: sqlInfo.bindings });
+    logger.debug("[BrightDataService] SQL query prepared", {
+      sql: sqlInfo.sql,
+      bindings: sqlInfo.bindings,
+    });
 
     const dbResults = await query;
 
@@ -60,7 +66,7 @@ export class BrightDataService {
       operationId: op.id,
       filters,
       count: dbResults.length,
-      results: dbResults
+      results: dbResults,
     });
 
     return dbResults;
@@ -71,7 +77,10 @@ export class BrightDataService {
    */
   public async runOperation(op: ScrapOperations) {
     if (!op.target_conditions || !Array.isArray(op.target_conditions)) {
-      logger.warn("[BrightDataService] Operation has no target_conditions or invalid format", { operationId: op.id });
+      logger.warn(
+        "[BrightDataService] Operation has no target_conditions or invalid format",
+        { operationId: op.id }
+      );
       return [];
     }
 
@@ -97,7 +106,7 @@ export class BrightDataService {
 
       logger.info("[BrightDataService] BrightData batch triggered", {
         operationId: op.id,
-        responseId: res.data?.id
+        responseId: res.data?.id,
       });
 
       return res.data;
