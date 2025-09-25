@@ -9,12 +9,16 @@ import { logger } from "../../logger";
 export class BrightDataService {
   private app: Application;
   private apiToken: string;
-  private apiEndpoint: string;
+  private apiBaseUrl: string;
+  private linkedinDatasetId: string;
+  private datasetId: string;
 
   constructor(app: Application) {
     this.app = app;
-    this.apiToken = process.env.BRIGHTDATA_API_TOKEN || "";
-    this.apiEndpoint = "https://api.brightdata.com/scraper/run"; // endpoint de batch
+    this.apiToken = process.env.BRIGHTDATA_TOKEN || "";
+    this.apiBaseUrl = process.env.BRIGHTDATA_URL || "https://api.brightdata.com";
+    this.linkedinDatasetId = process.env.BRIGHTDATA_LIKEDIN_DATASET_ID || "";
+    this.datasetId = process.env.BRIGHTDATA_DATASET_ID || "";
   }
 
   /**
@@ -22,10 +26,9 @@ export class BrightDataService {
    */
   public async analyzeTargetConditions(op: ScrapOperations) {
     if (!op.target_conditions || !Array.isArray(op.target_conditions)) {
-      logger.warn(
-        "[BrightDataService] Operation has no target_conditions or invalid format",
-        { operationId: op.id }
-      );
+      logger.warn("[BrightDataService] Operation has no target_conditions or invalid format", {
+        operationId: op.id,
+      });
       return [];
     }
 
@@ -38,7 +41,7 @@ export class BrightDataService {
       let value: any = f.value;
 
       // Conversão automática de booleanos
-      const booleanFields = ["working", "hasDisability"]; // campos booleanos
+      const booleanFields = ["working", "hasDisability"];
       if (booleanFields.includes(f.field)) {
         if (value === "true" || value === "Sim") value = true;
         else if (value === "false" || value === "Não") value = false;
@@ -53,7 +56,6 @@ export class BrightDataService {
       query = query.where(f.field, value);
     }
 
-    // Mostra a SQL gerada
     const sqlInfo = query.toSQL();
     logger.debug("[BrightDataService] SQL query prepared", {
       sql: sqlInfo.sql,
@@ -66,53 +68,97 @@ export class BrightDataService {
       operationId: op.id,
       filters,
       count: dbResults.length,
-      results: dbResults,
     });
 
     return dbResults;
   }
 
   /**
-   * Executa um scraper BrightData para uma operação
+   * Executa um scraper BrightData para uma operação via batch job
    */
   public async runOperation(op: ScrapOperations) {
     if (!op.target_conditions || !Array.isArray(op.target_conditions)) {
-      logger.warn(
-        "[BrightDataService] Operation has no target_conditions or invalid format",
-        { operationId: op.id }
-      );
+      logger.warn("[BrightDataService] Operation has no target_conditions or invalid format", {
+        operationId: op.id,
+      });
       return [];
     }
 
     const filters = op.target_conditions as Array<{ field: string; value: string }>;
 
-    const payload = {
-      scraper_id: process.env.BRIGHTDATA_SCRAPER_ID,
-      collection_method: "batch",
-      params: {
-        filters,
-        operationId: op.id,
-      },
-    };
+    // Exemplo de payload seguindo a doc do /dca/trigger
+    const payload = filters.map((f) => {
+      return {
+        url: `${process.env.BRIGHTDATA_ENDPOINT}?field=${encodeURIComponent(
+          f.field
+        )}&value=${encodeURIComponent(f.value)}&operationId=${op.id}`,
+      };
+    });
+
+    const endpoint = `${this.apiBaseUrl}/dca/trigger`;
 
     try {
-      const res = await axios.post(this.apiEndpoint, payload, {
+      const startTime = Date.now();
+
+      const res = await axios.post(endpoint, payload, {
         headers: {
           Authorization: `Bearer ${this.apiToken}`,
           "Content-Type": "application/json",
         },
-        timeout: 30000,
+        timeout: 60000,
       });
+
+      const duration = Date.now() - startTime;
 
       logger.info("[BrightDataService] BrightData batch triggered", {
         operationId: op.id,
-        responseId: res.data?.id,
+        response: res.data,
+        durationMs: duration,
+      });
+
+      // Log extra para monitorar consumo de tokens (BrightData cobra por request/dataset)
+      logger.debug("[BrightDataService] BrightData request metadata", {
+        operationId: op.id,
+        payloadSize: JSON.stringify(payload).length,
+        datasetId: this.datasetId,
+        linkedinDatasetId: this.linkedinDatasetId,
       });
 
       return res.data;
     } catch (err: any) {
       logger.error("[BrightDataService] BrightData batch request failed", {
         operationId: op.id,
+        error: err?.message ?? String(err),
+        stack: err?.stack,
+      });
+      throw err;
+    }
+  }
+
+  /**
+   * Recupera resultados de dataset no BrightData
+   */
+  public async getResults(datasetId?: string) {
+    const endpoint = `${this.apiBaseUrl}/dca/dataset`;
+    try {
+      const res = await axios.get(endpoint, {
+        headers: {
+          Authorization: `Bearer ${this.apiToken}`,
+        },
+        params: {
+          dataset_id: datasetId || this.datasetId,
+        },
+      });
+
+      logger.info("[BrightDataService] BrightData dataset fetched", {
+        datasetId: datasetId || this.datasetId,
+        count: Array.isArray(res.data) ? res.data.length : "unknown",
+      });
+
+      return res.data;
+    } catch (err: any) {
+      logger.error("[BrightDataService] Failed to fetch dataset", {
+        datasetId: datasetId || this.datasetId,
         error: err?.message ?? String(err),
       });
       throw err;
