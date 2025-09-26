@@ -2,6 +2,7 @@
 import type { Knex } from 'knex'
 
 export async function up(knex: Knex): Promise<void> {
+	if (await knex.schema.hasTable('linkedin')) return;
   await knex.schema.createTable('linkedin', table => {
     table.increments('id')
 		table.bigInteger('studentId')

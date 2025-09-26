@@ -1,6 +1,7 @@
 import type { Knex } from "knex";
 
 export async function up(knex: Knex): Promise<void> {
+  if (await knex.schema.hasTable('scrap_operations')) return;
   await knex.schema.createTable('scrap_operations', table => {
     table.increments('id')
     table.string('type').notNullable() // Tipo de operação (ex: LinkedIn)

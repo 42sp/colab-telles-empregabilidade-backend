@@ -1,6 +1,7 @@
 import type { Knex } from "knex";
 
 export async function up(knex: Knex): Promise<void> {
+	if (await knex.schema.hasTable('snapshots')) return;
 	await knex.schema.createTable('snapshots', (table) => {
 		table.bigIncrements('id').primary();
 		table.string('snapshot');
