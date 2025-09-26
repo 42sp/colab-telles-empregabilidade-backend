@@ -6,7 +6,6 @@ export async function up(knex: Knex): Promise<void> {
 	if (!exists) {
 		await knex.schema.createTable('students', table => {
 			table.increments('id')
-
 			table.string('text')
 		})
 	}
