@@ -14,21 +14,33 @@ export default function (app: Application) {
       }
 
       for (const r of results) {
-        // r.url agora é a URL original; r.data ou r.result pode ter os dados coletados
-        const rawData = r.data ?? r.result ?? r; 
+        const rawData = r.data ?? r.result ?? r;
 
+        // Inserir na tabela linkedin
         await knex('linkedin')
           .insert({
-            operation_id: r.operation_id ?? null, // operationId enviado no trigger payload
+            operation_id: r.operation_id ?? null,
             linkedin_url: r.url,
             raw_data: JSON.stringify(rawData),
             created_at: new Date(),
           })
           .onConflict(['operation_id', 'linkedin_url'])
           .merge();
+
+        // Inserir snapshot associado
+        if (r.snapshot_id) {
+          await knex('snapshots')
+            .insert({
+              linkedin: r.url,
+              snapshot: r.snapshot_id,
+              created_at: new Date(),
+            })
+            .onConflict(['linkedin', 'snapshot'])
+            .ignore();
+        }
       }
 
-      logger.info('[BrightDataWebhook] Results saved', { count: results.length });
+      logger.info('[BrightDataWebhook] Results and snapshots saved', { count: results.length });
 
       res.send({ ok: true, saved: results.length });
     } catch (err: any) {

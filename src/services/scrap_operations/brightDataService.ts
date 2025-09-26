@@ -33,7 +33,6 @@ export class BrightDataService {
     }
 
     const knex = this.app.get('postgresqlClient')
-
     const filters = op.target_conditions as Array<{ field: string; value: string }>
     let query = knex('students').select('*')
 
@@ -84,8 +83,12 @@ export class BrightDataService {
       return []
     }
 
-    // 2️⃣ Extrair URLs do LinkedIn
-    const urls = dbResults.map((s: any) => s.linkedin).filter(Boolean)
+    // 2️⃣ Extrair URLs do LinkedIn e normalizar
+    const urls = dbResults
+      .map((s: any) => s.linkedin)
+      .filter(Boolean)
+      .map(this.normalizeLinkedinUrl)
+
     if (!urls.length) {
       logger.warn('[BrightDataService] No valid LinkedIn URLs found for operation', { operationId: op.id })
       return []
@@ -93,12 +96,9 @@ export class BrightDataService {
 
     // 3️⃣ Payload para Bright Data (dataset)
     const payload = { urls: urls.map(url => ({ url })) }
-
     const endpoint = `${this.apiBaseUrl}/datasets/v3/trigger`
-
     const webhookUrl = process.env.BRIGHTDATA_WEBHOOK_URL
 
-    // **PRINT do payload e parâmetros**
     logger.info('[BrightDataService] Payload for BrightData trigger', {
       payload,
       params: {
@@ -131,6 +131,21 @@ export class BrightDataService {
         countUrls: urls.length,
         response: res.data
       })
+
+      // 4️⃣ Registrar em snapshots local (simulando searchLinkedIn)
+      const knex = this.app.get('postgresqlClient')
+      const chunkSize = 10
+      for (let i = 0; i < dbResults.length; i += chunkSize) {
+        const chunk = dbResults.slice(i, i + chunkSize)
+        // Simulação: cada chunk tem snapshot_id
+        const snapshotId = res.data.snapshot_id ?? `snapshot_${Date.now()}_${i}`
+        await knex('snapshots').insert(
+          chunk.map(m => ({
+            linkedin: m.linkedin,
+            snapshot: snapshotId
+          }))
+        )
+      }
 
       return { message: 'Scraping triggered via dataset. Results will arrive via webhook.' }
     } catch (err: any) {
@@ -171,5 +186,27 @@ export class BrightDataService {
       })
       throw err
     }
+  }
+
+  /**
+   * Normaliza URLs do LinkedIn para o formato correto
+   */
+  private normalizeLinkedinUrl(url: string): string {
+    if (!url) return ''
+    let splited = url.split("https:")
+    if (splited[1]) url = splited[1]
+    splited = url.split("http:")
+    if (splited[1]) url = splited[1]
+    splited = url.split("//")
+    if (splited[1]) url = splited[1]
+    splited = url.split("linkedin.com/")
+    if (splited[1]) url = splited[1]
+    splited = url.split('in/')
+    if (splited[1]) url = splited[1]
+    let index = url.indexOf('?')
+    if (index !== -1) url = url.substring(0, index)
+    index = url.indexOf('/')
+    if (index !== -1) url = url.substring(0, index)
+    return `https://www.linkedin.com/in/${url}`
   }
 }
