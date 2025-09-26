@@ -96,8 +96,19 @@ export class BrightDataService {
 
     const endpoint = `${this.apiBaseUrl}/datasets/v3/trigger`
 
-    // Webhook configurado no .env
     const webhookUrl = process.env.BRIGHTDATA_WEBHOOK_URL
+
+    // **PRINT do payload e parâmetros**
+    logger.info('[BrightDataService] Payload for BrightData trigger', {
+      payload,
+      params: {
+        dataset_id: this.linkedinDatasetId,
+        include_errors: true,
+        format: 'json',
+        uncompressed_webhook: true,
+        endpoint: webhookUrl
+      }
+    })
 
     try {
       const res = await axios.post(endpoint, payload, {
