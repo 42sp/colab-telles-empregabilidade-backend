@@ -34,7 +34,6 @@ const ENV = process.env.NODE_ENV || 'development'
 
 const corsOptions = {
   origin: [
-    'https://colab-telles-empregabilidade-frontend.onrender.com',
     'https://temp-empregabilidade-frontend.eorpdr.easypanel.host'
   ],
   credentials: true,

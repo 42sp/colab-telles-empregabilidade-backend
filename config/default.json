@@ -3,7 +3,6 @@
   "port": 3030,
   "public": "./public/",
   "origins": [
-    "https://colab-telles-empregabilidade-frontend.onrender.com",
     "https://temp-empregabilidade-frontend.eorpdr.easypanel.host"
   ],
   "paginate": {
