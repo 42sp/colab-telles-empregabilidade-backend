@@ -86,7 +86,7 @@ export class BrightDataService {
     }
 
     // 2️⃣ Extrair URLs do LinkedIn
-    const urls = dbResults.map((s: any) => s.linkedin_url).filter(Boolean)
+    const urls = dbResults.map((s: any) => s.linkedin).filter(Boolean)
     if (!urls.length) {
       logger.warn('[BrightDataService] No valid LinkedIn URLs found for operation', { operationId: op.id })
       return []
