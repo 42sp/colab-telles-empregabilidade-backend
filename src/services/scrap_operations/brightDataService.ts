@@ -74,8 +74,7 @@ export class BrightDataService {
   }
 
   /**
-   * Executa um scraper BrightData para uma operação via batch job
-   * (Atualmente apenas testa a pesquisa no DB, sem chamar BrightData)
+   * Executa operação no Bright Data via dataset trigger (searchLinkedIn)
    */
   public async runOperation(op: ScrapOperations) {
     // 1️⃣ Filtrar alunos
@@ -92,10 +91,10 @@ export class BrightDataService {
       return []
     }
 
-    // 3️⃣ Payload para Bright Data
-    const payload = urls.map(url => ({ url }))
-    const collector = this.linkedinDatasetId
-    const endpoint = `${this.apiBaseUrl}/dca/trigger?collector=${collector}`
+    // 3️⃣ Payload para Bright Data (dataset)
+    const payload = { urls: urls.map(url => ({ url })) }
+
+    const endpoint = `${this.apiBaseUrl}/datasets/v3/trigger`
 
     // Webhook configurado no .env
     const webhookUrl = process.env.BRIGHTDATA_WEBHOOK_URL
@@ -107,23 +106,24 @@ export class BrightDataService {
           'Content-Type': 'application/json'
         },
         params: {
-          // 🔗 o Bright Data vai chamar esse endpoint quando terminar
-          webhook: webhookUrl,
+          dataset_id: this.linkedinDatasetId,
+          include_errors: true,
           format: 'json',
-          uncompressed_webhook: true
+          uncompressed_webhook: true,
+          endpoint: webhookUrl
         },
         timeout: 60000
       })
 
-      logger.info('[BrightDataService] BrightData batch triggered (async)', {
+      logger.info('[BrightDataService] BrightData dataset triggered (async)', {
         operationId: op.id,
         countUrls: urls.length,
         response: res.data
       })
 
-      return { message: 'Scraping triggered. Results will arrive via webhook.' }
+      return { message: 'Scraping triggered via dataset. Results will arrive via webhook.' }
     } catch (err: any) {
-      logger.error('[BrightDataService] BrightData trigger failed', {
+      logger.error('[BrightDataService] BrightData dataset trigger failed', {
         operationId: op.id,
         error: err?.message ?? String(err)
       })
@@ -135,14 +135,15 @@ export class BrightDataService {
    * Recupera resultados de dataset no BrightData
    */
   public async getResults(datasetId?: string) {
-    const endpoint = `${this.apiBaseUrl}/dca/dataset`
+    const endpoint = `${this.apiBaseUrl}/datasets/v3/results`
     try {
       const res = await axios.get(endpoint, {
         headers: {
           Authorization: `Bearer ${this.apiToken}`
         },
         params: {
-          dataset_id: datasetId || this.datasetId
+          dataset_id: datasetId || this.datasetId,
+          format: 'json'
         }
       })
 
