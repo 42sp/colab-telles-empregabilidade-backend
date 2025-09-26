@@ -8,7 +8,7 @@ export async function up(knex: Knex): Promise<void> {
 
 		table.string('fileName').notNullable()
 		table.timestamp('importationDate', { useTz: true }).notNullable()
-		table.uuid('userId').notNullable();
+		table.integer('userId').notNullable();
 		table.foreign('userId').references('id').inTable('users').onDelete('CASCADE');
   })
 }
