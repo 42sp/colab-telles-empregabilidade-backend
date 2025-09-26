@@ -16,13 +16,13 @@ export class BrightDataService {
   constructor(app: Application) {
     this.app = app
     this.apiToken = process.env.BRIGHTDATA_TOKEN || ''
-    this.apiBaseUrl = process.env.BRIGHTDATA_URL || 'https://api.brightdata.com'
+    this.apiBaseUrl = process.env.BRIGHTDATA_URL_V3 || 'https://api.brightdata.com/datasets/v3/trigger'
     this.linkedinDatasetId = process.env.BRIGHTDATA_LIKEDIN_DATASET_ID || ''
     this.datasetId = process.env.BRIGHTDATA_DATASET_ID || ''
   }
 
   /**
-   * Apenas analisa o banco de dados local de acordo com target_conditions
+   * Analisa o banco local de acordo com target_conditions
    */
   public async analyzeTargetConditions(op: ScrapOperations) {
     if (!op.target_conditions || !Array.isArray(op.target_conditions)) {
@@ -73,17 +73,16 @@ export class BrightDataService {
   }
 
   /**
-   * Executa operação no Bright Data via dataset trigger (searchLinkedIn)
+   * Executa operação no BrightData via dataset trigger (searchLinkedIn)
    */
   public async runOperation(op: ScrapOperations) {
-    // 1️⃣ Filtrar alunos
     const dbResults = await this.analyzeTargetConditions(op)
     if (!dbResults.length) {
       logger.warn('[BrightDataService] No students match target_conditions', { operationId: op.id })
       return []
     }
 
-    // 2️⃣ Extrair URLs do LinkedIn e normalizar
+    // Extrair URLs do LinkedIn e normalizar
     const urls = dbResults
       .map((s: any) => s.linkedin)
       .filter(Boolean)
@@ -94,8 +93,8 @@ export class BrightDataService {
       return []
     }
 
-    // 3️⃣ Payload para Bright Data (dataset)
-    const payload = { urls: urls.map(url => ({ url })) }
+    // Payload no formato que o BrightData espera: [ { url: "..." }, ... ]
+    const payload = urls.map(url => ({ url }))
     const endpoint = `${this.apiBaseUrl}/datasets/v3/trigger`
     const webhookUrl = process.env.BRIGHTDATA_WEBHOOK_URL
 
@@ -132,22 +131,19 @@ export class BrightDataService {
         response: res.data
       })
 
-      // 4️⃣ Registrar em snapshots local (simulando searchLinkedIn)
-      const knex = this.app.get('postgresqlClient')
-      const chunkSize = 10
-      for (let i = 0; i < dbResults.length; i += chunkSize) {
-        const chunk = dbResults.slice(i, i + chunkSize)
-        // Simulação: cada chunk tem snapshot_id
-        const snapshotId = res.data.snapshot_id ?? `snapshot_${Date.now()}_${i}`
-        await knex('snapshots').insert(
-          chunk.map(m => ({
-            linkedin: m.linkedin,
-            snapshot: snapshotId
-          }))
-        )
+      // Registrar snapshot_id retornado no banco
+      const snapshotId = res.data.snapshot_id
+      if (snapshotId) {
+        const knex = this.app.get('postgresqlClient')
+        const inserts = dbResults.map(m => ({
+          linkedin: m.linkedin,
+          snapshot: snapshotId,
+          created_at: new Date()
+        }))
+        await knex('snapshots').insert(inserts).onConflict(['linkedin', 'snapshot']).ignore()
       }
 
-      return { message: 'Scraping triggered via dataset. Results will arrive via webhook.' }
+      return { message: 'Scraping triggered via dataset. Results will arrive via webhook.', snapshot_id: snapshotId }
     } catch (err: any) {
       logger.error('[BrightDataService] BrightData dataset trigger failed', {
         operationId: op.id,
