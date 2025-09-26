@@ -137,8 +137,7 @@ export class BrightDataService {
         const knex = this.app.get('postgresqlClient')
         const inserts = dbResults.map(m => ({
           linkedin: m.linkedin,
-          snapshot: snapshotId,
-          created_at: new Date()
+          snapshot: snapshotId
         }))
         await knex('snapshots').insert(inserts).onConflict(['linkedin', 'snapshot']).ignore()
       }
