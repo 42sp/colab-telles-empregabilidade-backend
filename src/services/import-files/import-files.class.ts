@@ -237,21 +237,21 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 							return after.length > 0;
 						});
 				if (validChunk.length === 0) continue;
-				console.log(validChunk);
-				// const response = await $service.searchLinkedIn(
-				// 	{ urls: chunk.map(m => ({ url: m.linkedin })) },
-				// 	String(accessToken)
-				// );
 
-				// if (response?.data?.snapshot_id)
-				// {
-				// 	await trx("snapshots").insert(chunk.map(m => (
-				// 		{
-				// 			linkedin: m.linkedin,
-				// 			snapshot: response.data.snapshot_id
-				// 		}
-				// 	)));
-				// }
+				const response = await $service.searchLinkedIn(
+					{ urls: validChunk },
+					String(accessToken)
+				);
+
+				if (response?.data?.snapshot_id)
+				{
+					await trx("snapshots").insert(chunk.map(m => (
+						{
+							linkedin: m.linkedin,
+							snapshot: response.data.snapshot_id
+						}
+					)));
+				}
 			}
 		}
 		catch(err: any) {
@@ -357,11 +357,8 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 					name: typedRow[headers.find(f => f.includes("NOME")) ?? "NOME"],
 					linkedin: this.normalizeLinkedinUrl(typedRow[headers.find(f => f.includes("LinkedIn")) ?? "LinkedIn"]),
 					createdAt: createAt,
-					importedFilesId: importedFilesId,
-					ismartEmail: ""
-				};
-
-				console.log(item)
+					importedFilesId: importedFilesId
+				} as ImportFiles;
 
 				const existing = await this.Model('students').where({ linkedin: item.linkedin }).first();
 				if (existing) {
