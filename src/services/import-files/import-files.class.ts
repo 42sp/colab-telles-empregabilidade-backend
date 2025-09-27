@@ -358,7 +358,9 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 					linkedin: this.normalizeLinkedinUrl(typedRow[headers.find(f => f.includes("LinkedIn")) ?? "LinkedIn"]),
 					createdAt: createAt,
 					importedFilesId: importedFilesId
-				} as ImportFiles;
+				};
+
+				console.log(item)
 
 				const existing = await this.Model('students').where({ linkedin: item.linkedin }).first();
 				if (existing) {
