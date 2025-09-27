@@ -380,7 +380,7 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 			result.status = 'ERROR';
 			result.message = err.message || 'Erro ao processar dados de conversão.';
 		}
-		throw new Error(result.message);
+
 		return result;
 	}
 
