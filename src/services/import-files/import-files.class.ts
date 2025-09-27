@@ -158,6 +158,8 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 				item.fullName && String(item.fullName).trim() !== ''
 			));
 
+			console.log(conversionsData);
+
 			if (!conversionsData.length) {
 				throw new BadRequest('Nenhuma linha válida encontrada para importação. Verifique o arquivo.');
 			}
