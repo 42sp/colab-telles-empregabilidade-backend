@@ -47,35 +47,74 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 		};
 
 		const trx = await this.Model.transaction();
+		let importedFileId: number | null = null;
 
 		try
 		{
-			const accessToken = params?.authentication?.accessToken
-			const id = await this.insertImportedFile(file, String(params?.user?.id ?? ''), trx);
-			let studentsData = await this.insertBdGeral(file, id, trx, accessToken);
-			studentsData = await this.insertNameLinkedin(file, id, trx, accessToken);
-			await this.insertConversionsData(file, id, trx);
-			result = await this.postLinkedIn(studentsData.dbGeralData, trx, params?.authentication?.accessToken);
+			const accessToken = params?.authentication?.accessToken;
+
+			console.log('Step 1: Inserting imported file...');
+			importedFileId = await this.insertImportedFile(file, String(params?.user?.id ?? ''), trx);
+			console.log('Step 1 completed - Imported file ID:', importedFileId);
+
+			if (!importedFileId) {
+				throw new Error('Failed to get imported file ID');
+			}
+
+			console.log('Step 2: Inserting BD Geral data...');
+			let studentsData = await this.insertBdGeral(file, importedFileId, trx, accessToken);
+			console.log('Step 2 completed - Students data status:', studentsData.status);
+
+			if (studentsData.status === 'ERROR') {
+				throw new Error(`Error in insertBdGeral: ${studentsData.message}`);
+			}
+
+			console.log('Step 3: Inserting Name LinkedIn data...');
+			studentsData = await this.insertNameLinkedin(file, importedFileId, trx, accessToken);
+			console.log('Step 3 completed - Students data status:', studentsData.status);
+
+			if (studentsData.status === 'ERROR') {
+				throw new Error(`Error in insertNameLinkedin: ${studentsData.message}`);
+			}
+
+			console.log('Step 4: Inserting conversions data...');
+			const conversionsResult = await this.insertConversionsData(file, importedFileId, trx);
+			console.log('Step 4 completed - Conversions status:', conversionsResult.status);
+
+			if (conversionsResult.status === 'ERROR') {
+				throw new Error(`Error in insertConversionsData: ${conversionsResult.message}`);
+			}
+
+			// console.log('Step 5: Posting LinkedIn data...');
+			// result = await this.postLinkedIn(studentsData.dbGeralData, trx, params?.authentication?.accessToken);
+			// console.log('Step 5 completed - PostLinkedIn status:', result.status);
 
 			// throw new Error("rollback");
 			if (result.status === 'OK') {
+				console.log('All steps completed successfully, committing transaction...');
 				await trx.commit();
 				result.message = `${file.originalname} processado com sucesso!`;
 			}
 			else {
+				console.log('Error in final step, rolling back transaction...');
 				await trx.rollback();
 				result.message = `${file.originalname} processado com erros: ${result.message}`;
 			}
 		}
 		catch(err: any)
 		{
-			await trx.rollback();
+			console.error('Error in create method:', err);
+			try {
+				await trx.rollback();
+			} catch (rollbackError) {
+				console.error('Error during rollback:', rollbackError);
+			}
 			throw err;
 		}
 		return result;
 	}
 
-	async insertImportedFile(file: FileParams, userId: string, trx: Knex.Transaction) {
+	async insertImportedFile(file: FileParams, userId: string, trx: Knex.Transaction): Promise<number> {
 		const obj = {
 			fileName: file.originalname,
 			importationDate: new Date().toISOString(),
@@ -84,11 +123,11 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 
 		const result = await trx('imported-files').insert(obj).returning(['id']);
 
-		if (!result) {
-			throw new Error('Erro ao inserir arquivo importado.');
+		if (!result || !result[0] || !result[0].id) {
+			throw new Error('Erro ao inserir arquivo importado - ID não retornado.');
 		}
 
-		return result[0].id ?? null;
+		return result[0].id;
 	}
 
 	async insertConversionsData(file: FileParams, importedFilesId: number, trx: Knex.Transaction) {
@@ -99,7 +138,6 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 
 		try
 		{
-
 			const workbook = XLSX.read(file.buffer, { type: 'buffer' });
 			const sheetName = workbook.SheetNames.find(name => name.toLowerCase() === 'conversão');
 			if (!sheetName) throw new BadRequest('Aba "conversão" não encontrada');
@@ -158,22 +196,40 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 				item.fullName && String(item.fullName).trim() !== ''
 			));
 
-			console.log(conversionsData);
+			console.log('Conversions data to insert:', conversionsData.length, 'records');
 
 			if (!conversionsData.length) {
 				throw new BadRequest('Nenhuma linha válida encontrada para importação. Verifique o arquivo.');
 			}
 
-			const result = await trx('conversions').insert(conversionsData);
-
-			if (!result) {
-				throw new BadRequest('Erro ao inserir dados de conversão.');
+			// Check if the transaction is still valid before proceeding
+			try {
+				await trx.raw('SELECT 1');
+			} catch (txError) {
+				throw new Error('Transaction is in an invalid state. Cannot proceed with conversions insertion.');
 			}
+
+			// Insert records in smaller batches to avoid potential issues
+			const batchSize = 50;
+			for (let i = 0; i < conversionsData.length; i += batchSize) {
+				const batch = conversionsData.slice(i, i + batchSize);
+
+				try {
+					const insertResult = await trx('conversions').insert(batch);
+					console.log(`Inserted batch ${Math.floor(i / batchSize) + 1}: ${batch.length} records`);
+				} catch (batchError: any) {
+					console.error(`Error inserting batch ${Math.floor(i / batchSize) + 1}:`, batchError);
+					throw new Error(`Failed to insert conversions batch ${Math.floor(i / batchSize) + 1}: ${batchError.message}`);
+				}
+			}
+
+			result.message = `Successfully inserted ${conversionsData.length} conversion records`;
 		}
 		catch(err: any) {
-			console.log(err);
+			console.error('Error in insertConversionsData:', err);
 			result.status = 'ERROR';
 			result.message = err.message || 'Erro ao processar dados de conversão.';
+			throw err; // Re-throw to properly handle transaction rollback
 		}
 
 		return result;
