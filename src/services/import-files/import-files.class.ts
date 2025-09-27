@@ -357,7 +357,8 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 					name: typedRow[headers.find(f => f.includes("NOME")) ?? "NOME"],
 					linkedin: this.normalizeLinkedinUrl(typedRow[headers.find(f => f.includes("LinkedIn")) ?? "LinkedIn"]),
 					createdAt: createAt,
-					importedFilesId: importedFilesId
+					importedFilesId: importedFilesId,
+					ismartEmail: ""
 				};
 
 				console.log(item)
