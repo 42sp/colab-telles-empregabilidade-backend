@@ -205,7 +205,7 @@ export class LinkedinDashboardService<ServiceParams extends Params = LinkedinPar
 			sectorDistribution: sectorDistributionRaw.map(item => ({
 				name: item.name ? item.name : 'Não Consta',
 				value: Number(item.value)
-			})).filter(item => item.name !== 'Não Consta'),
+			})),
 			statusSync: {
 				lastSync: lastSynchronization?.last_sync,
 				status: 'Sincronizado',
