@@ -339,7 +339,7 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 			const workbook = XLSX.read(file.buffer, { type: 'buffer' });
 
 			const sheetName = workbook.SheetNames[0];
-			console.log(sheetName);
+
 			if (!sheetName) {
 				result.status = 'EMPTY';
 				result.message = 'Aba não possui dados para importar.';
@@ -353,10 +353,9 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 
 			for (const row of rows) {
 				const typedRow = row as Record<string, any>;
-
 				const item = {
-					name: typedRow[headers.find(f => f === "NOME") ?? "NOME"],
-					linkedin: this.normalizeLinkedinUrl(typedRow[headers.find(f => f === "LinkedIn") ?? "LinkedIn"]),
+					name: typedRow[headers.find(f => f.includes("NOME")) ?? "NOME"],
+					linkedin: this.normalizeLinkedinUrl(typedRow[headers.find(f => f.includes("LinkedIn")) ?? "LinkedIn"]),
 					createdAt: createAt,
 					importedFilesId: importedFilesId
 				} as ImportFiles;
@@ -381,7 +380,7 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 			result.status = 'ERROR';
 			result.message = err.message || 'Erro ao processar dados de conversão.';
 		}
-
+		throw new Error(result.message);
 		return result;
 	}
 
