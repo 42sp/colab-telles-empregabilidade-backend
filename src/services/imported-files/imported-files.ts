@@ -69,18 +69,24 @@ export const importedFiles = (app: Application) => {
     after: {
       all: [
         async (context: HookContext) => {
-					if (
-						context.result && context.result.data[0].userId
-					) {
-						try {
-							context.result.data.order
-							for (const item of context.result.data) {
+					try {
+						let items: any[] = [];
+
+						if (context.result && context.result.data && Array.isArray(context.result.data) && context.result.data.length > 0) {
+							items = context.result.data;
+						}
+						else if (context.result && context.result.userId) {
+							items = [context.result];
+						}
+
+						for (const item of items) {
+							if (item && item.userId) {
 								const user = await context.app.service('users').get(item.userId);
 								(item as any).user = user;
 							}
-						} catch (e) {
-							console.error('Error fetching user:', e);
 						}
+					} catch (e) {
+						console.error('Error fetching user:', e);
 					}
           return context;
         }
