@@ -227,19 +227,8 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 			for (let i = 0; i < dbGeralData.length; i += chunkSize) {
 				const chunk = dbGeralData.slice(i, i + chunkSize);
 
-				const validChunk =	chunk
-						.map(m => m.linkedin)
-						.filter(linkedin => {
-							if (typeof linkedin !== 'string') return false;
-							const prefix = 'https://www.linkedin.com/in/';
-							if (!linkedin.startsWith(prefix)) return false;
-							const after = linkedin.slice(prefix.length);
-							return after.length > 0;
-						});
-				if (validChunk.length === 0) continue;
-
 				const response = await $service.searchLinkedIn(
-					{ urls: validChunk },
+					{ urls: chunk.map(m => ({ url: m.linkedin })) },
 					String(accessToken)
 				);
 
