@@ -347,13 +347,16 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 			}
 			const sheet = workbook.Sheets[sheetName];
 			const rows = XLSX.utils.sheet_to_json(sheet);
+			const headers = Object.keys(Object(rows[0]));
+
 			const createAt = new Date().toISOString();
 
 			for (const row of rows) {
 				const typedRow = row as Record<string, any>;
+
 				const item = {
-					name: typedRow["NOME"],
-					linkedin: this.normalizeLinkedinUrl(typedRow["LinkedIn"]),
+					name: typedRow[headers.find(f => f === "NOME") ?? "NOME"],
+					linkedin: this.normalizeLinkedinUrl(typedRow[headers.find(f => f === "LinkedIn") ?? "LinkedIn"]),
 					createdAt: createAt,
 					importedFilesId: importedFilesId
 				} as ImportFiles;
