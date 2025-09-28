@@ -6,7 +6,7 @@ import { conversions } from './conversions/conversions'
 import { students } from './students/students'
 import { user } from './users/users'
 import { scrapOperations } from './scrap_operations/scrapOperations'
-import brightDataWebhook from './scrap_operations/brightdata.webhook';
+import brightDataWebhook  from './scrap_operations/brightdata.webhook';
 
 // For more information about this file see https://dove.feathersjs.com/guides/cli/application.html#configure-functions
 import type { Application } from '../declarations'
