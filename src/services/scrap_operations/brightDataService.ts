@@ -77,6 +77,7 @@ export class BrightDataService {
    */
   public async runOperation(op: ScrapOperations) {
     const dbResults = await this.analyzeTargetConditions(op)
+    
     if (!dbResults.length) {
       logger.warn('[BrightDataService] No students match target_conditions', { operationId: op.id })
       return []
@@ -97,6 +98,8 @@ export class BrightDataService {
     const payload = urls.map(url => ({ url }))
     const endpoint = `${this.apiBaseUrl}/datasets/v3/trigger`
     const webhookUrl = process.env.BRIGHTDATA_WEBHOOK_URL
+
+    logger.info('[BrightDataService] Using webhook URL', { webhookUrl });
 
     logger.info('[BrightDataService] Payload for BrightData trigger', {
       payload,
