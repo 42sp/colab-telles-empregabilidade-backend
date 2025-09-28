@@ -140,7 +140,7 @@ export class BrightDataService {
           snapshot: snapshotId,
           created_at: new Date()
         }))
-        await knex('snapshots').insert(inserts).onConflict(['linkedin', 'snapshot']).ignore()
+        await knex('snapshots').insert(inserts)
       }
 
       return { message: 'Scraping triggered via dataset. Results will arrive via webhook.', snapshot_id: snapshotId }
