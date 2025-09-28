@@ -16,7 +16,7 @@ export class BrightDataService {
   constructor(app: Application) {
     this.app = app
     this.apiToken = process.env.BRIGHTDATA_TOKEN || ''
-    this.apiBaseUrl = process.env.BRIGHTDATA_URL_V3 || 'https://api.brightdata.com/datasets/v3/trigger'
+    this.apiBaseUrl = process.env.BRIGHTDATA_URL || 'https://api.brightdata.com/datasets/v3/trigger'
     this.linkedinDatasetId = process.env.BRIGHTDATA_LIKEDIN_DATASET_ID || ''
     this.datasetId = process.env.BRIGHTDATA_DATASET_ID || ''
   }
@@ -137,8 +137,7 @@ export class BrightDataService {
         const knex = this.app.get('postgresqlClient')
         const inserts = dbResults.map(m => ({
           linkedin: m.linkedin,
-          snapshot: snapshotId,
-          created_at: new Date()
+          snapshot: snapshotId
         }))
         await knex('snapshots').insert(inserts)
       }
