@@ -2,6 +2,7 @@
 import type { Id, Params } from '@feathersjs/feathers'
 import { KnexService } from '@feathersjs/knex'
 import type { KnexAdapterParams, KnexAdapterOptions } from '@feathersjs/knex'
+import { logger } from '../../logger';
 
 import type { Application } from '../../declarations'
 import type { Linkedin, LinkedinData, LinkedinPatch, LinkedinQuery } from './linkedin.schema'
@@ -63,17 +64,24 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
             throw new Error('Erro ao inserir dados de linkedin.')
           }
 
-          const resultStudent = await trx('students')
-            .update({
-              working: current_company?.name ? true : false,
-              organization: current_company?.name ?? null,
-              current_position: current_company?.title ?? null,
-            })
-            .where('id', student.id)
+          const resultStudentData = {
+            working: current_company?.name ? true : false,
+            organization: current_company?.name ?? null,
+            current_position: current_company?.title ?? null
+          }
+
+          const resultStudent = await trx('students').update(resultStudentData).where('id', student.id)
 
           if (!resultStudent) {
             throw new Error('Erro ao atualizar dados do aluno.')
           }
+
+          logger.info('[LinkedinService] Updated student', {
+            studentId: student.id,
+            updatedFields: Object.entries(resultStudentData)
+              .filter(([key, value]) => student[key] !== value)
+              .map(([key, value]) => ({ field: key, oldValue: student[key], newValue: value }))
+          })
         }
       }
 
