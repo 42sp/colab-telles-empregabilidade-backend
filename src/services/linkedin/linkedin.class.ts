@@ -28,6 +28,15 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
 
       const createdAt = new Date().toISOString()
 
+      // Função para normalizar URLs do LinkedIn
+      function normalizeLinkedinUrl(url: string | undefined) {
+        if (!url) return ''
+        return url
+          .replace(/^https?:\/\/(www\.|fi\.)?/, '')
+          .trim()
+          .toLowerCase()
+      }
+
       for (let item of dataArray) {
         if (!item || !item['id']) {
           console.warn('Skipping item without valid id:', item)
@@ -35,16 +44,19 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
         }
 
         const current_company = item['current_company'] as { name?: string; title?: string } | undefined
-        const linkedinUrl = item['input_url'] ?? item['url']
+        const linkedinUrlRaw = item['input_url'] ?? item['url']
         const snapshotId = item['snapshotId']
+
+        const linkedinUrl = normalizeLinkedinUrl(linkedinUrlRaw)
 
         logger.info('[LinkedinService] Searching student in snapshots', {
           snapshotId,
+          linkedinUrlRaw,
           linkedinUrl,
           itemId: item['id']
         })
 
-        // 🔑 Busca dupla na tabela snapshots
+        // 🔑 Busca dupla na tabela snapshots usando URL normalizada
         let student: any
         if (snapshotId && linkedinUrl) {
           const snapshot = await trx('snapshots')
