@@ -135,8 +135,7 @@ export class BrightDataService {
 
     // Envia payload com studentId + URL
     const payload = validStudents.map(s => ({
-      url: s.normalizedUrl,
-      studentId: s.id
+      url: s.normalizedUrl
     }))
     const endpoint = `${this.apiBaseUrl}/datasets/v3/trigger`
     const webhookUrl = process.env.BRIGHTDATA_WEBHOOK_URL
