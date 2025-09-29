@@ -164,7 +164,7 @@ export class BrightDataService {
 
     for (const [index, chunk] of chunks.entries()) {
       const payload = chunk.map(s => ({ url: s.normalizedUrl }))
-      const endpoint = `${this.apiBaseUrl}`
+      const endpoint = `${this.apiBaseUrl}/datasets/v3/trigger`
       const webhookUrl = process.env.BRIGHTDATA_WEBHOOK_URL
 
       logger.info(
