@@ -13,12 +13,41 @@ export class BrightDataService {
   private linkedinDatasetId: string
   private datasetId: string
 
+  // Mapeamento sigla -> nome completo
+  private stateMap: Record<string, string> = {
+    AC: "Acre", AL: "Alagoas", AM: "Amazonas", AP: "Amapá", BA: "Bahia",
+    CE: "Ceará", DF: "Distrito Federal", ES: "Espírito Santo", GO: "Goiás",
+    MA: "Maranhão", MG: "Minas Gerais", MS: "Mato Grosso do Sul", MT: "Mato Grosso",
+    PA: "Pará", PB: "Paraíba", PE: "Pernambuco", PI: "Piauí", PR: "Paraná",
+    RJ: "Rio de Janeiro", RN: "Rio Grande do Norte", RO: "Rondônia", RR: "Roraima",
+    RS: "Rio Grande do Sul", SC: "Santa Catarina", SE: "Sergipe", SP: "São Paulo",
+    TO: "Tocantins"
+  }
+
   constructor(app: Application) {
     this.app = app
     this.apiToken = process.env.BRIGHTDATA_TOKEN || ''
     this.apiBaseUrl = process.env.BRIGHTDATA_URL || 'https://api.brightdata.com/datasets/v3/trigger'
     this.linkedinDatasetId = process.env.BRIGHTDATA_LIKEDIN_DATASET_ID || ''
     this.datasetId = process.env.BRIGHTDATA_DATASET_ID || ''
+  }
+
+  /**
+   * Normaliza valor de estado (sigla ou nome completo) para nome completo
+   */
+  private normalizeStateFilter(value: string) {
+    if (!value) return value
+    const trimmed = value.trim()
+
+    // Se for sigla, retorna nome completo
+    const upper = trimmed.toUpperCase()
+    if (this.stateMap[upper]) return this.stateMap[upper]
+
+    // Se for nome completo, ajusta capitalização
+    const found = Object.values(this.stateMap).find(
+      state => state.toLowerCase() === trimmed.toLowerCase()
+    )
+    return found || trimmed
   }
 
   /**
@@ -46,12 +75,18 @@ export class BrightDataService {
         else if (value === 'false' || value === 'Não') value = false
       }
 
-      logger.debug('[BrightDataService] Applying filter', {
-        field: f.field,
-        originalValue: f.value,
-        parsedValue: value
-      })
+      // Conversão de estado
+      if (f.field === 'currentState') {
+        const normalized = this.normalizeStateFilter(value)
+        query = query.where(builder =>
+          builder
+            .whereILike(f.field, normalized)
+            .orWhereILike(f.field, Object.entries(this.stateMap).find(([sigla, nome]) => nome === normalized)?.[0] || '')
+        )
+        continue
+      }
 
+      // Aplicar filtro normal
       query = query.where(f.field, value)
     }
 
@@ -83,7 +118,6 @@ export class BrightDataService {
       return []
     }
 
-    // Extrair URLs do LinkedIn e normalizar
     const urls = dbResults
       .map((s: any) => s.linkedin)
       .filter(Boolean)
@@ -94,23 +128,11 @@ export class BrightDataService {
       return []
     }
 
-    // Payload no formato que o BrightData espera: [ { url: "..." }, ... ]
     const payload = urls.map(url => ({ url }))
     const endpoint = `${this.apiBaseUrl}/datasets/v3/trigger`
     const webhookUrl = process.env.BRIGHTDATA_WEBHOOK_URL
 
-    logger.info('[BrightDataService] Using webhook URL', { webhookUrl });
-
-    logger.info('[BrightDataService] Payload for BrightData trigger', {
-      payload,
-      params: {
-        dataset_id: this.linkedinDatasetId,
-        include_errors: true,
-        format: 'json',
-        uncompressed_webhook: true,
-        endpoint: webhookUrl
-      }
-    })
+    logger.info('[BrightDataService] Payload for BrightData trigger', { payload })
 
     try {
       const res = await axios.post(endpoint, payload, {
@@ -128,20 +150,9 @@ export class BrightDataService {
         timeout: 60000
       })
 
-      logger.info('[BrightDataService] BrightData dataset triggered (async)', {
-        operationId: op.id,
-        countUrls: urls.length,
-        response: res.data
-      })
-
-      // Registrar snapshot_id retornado no banco
       const snapshotId = res.data.snapshot_id
       if (snapshotId) {
-        const knex = this.app.get('postgresqlClient')
-        const inserts = dbResults.map(m => ({
-          linkedin: m.linkedin,
-          snapshot: snapshotId
-        }))
+        const inserts = dbResults.map(m => ({ linkedin: m.linkedin, snapshot: snapshotId }))
         await knex('snapshots').insert(inserts)
       }
 
@@ -155,20 +166,12 @@ export class BrightDataService {
     }
   }
 
-  /**
-   * Recupera resultados de dataset no BrightData
-   */
   public async getResults(datasetId?: string) {
     const endpoint = `${this.apiBaseUrl}/datasets/v3/results`
     try {
       const res = await axios.get(endpoint, {
-        headers: {
-          Authorization: `Bearer ${this.apiToken}`
-        },
-        params: {
-          dataset_id: datasetId || this.datasetId,
-          format: 'json'
-        }
+        headers: { Authorization: `Bearer ${this.apiToken}` },
+        params: { dataset_id: datasetId || this.datasetId, format: 'json' }
       })
 
       logger.info('[BrightDataService] BrightData dataset fetched', {
@@ -186,9 +189,6 @@ export class BrightDataService {
     }
   }
 
-  /**
-   * Normaliza URLs do LinkedIn para o formato correto
-   */
   private normalizeLinkedinUrl(url: string): string {
     if (!url) return ''
     let splited = url.split("https:")
