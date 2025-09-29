@@ -23,78 +23,68 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
       const dataArray = Array.isArray(data) ? data : [data]
 
       if (!dataArray || dataArray.length === 0) {
+        logger.info('[LinkedinService] Nenhum dado para processar.')
         return { status: 'OK', message: 'Nenhum dado para processar.' }
       }
 
       const createdAt = new Date().toISOString()
 
-      // Função para normalizar URLs do LinkedIn
-      function normalizeLinkedinUrl(url: string | undefined) {
-        if (!url) return ''
-        return url
-          .replace(/^https?:\/\/(www\.|fi\.)?/, '')
-          .trim()
-          .toLowerCase()
-      }
+      const normalizeLinkedInUrl = (url: string) =>
+        url.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, '').replace(/\/$/, '')
 
-      for (let item of dataArray) {
-        if (!item || !item['id']) {
-          console.warn('Skipping item without valid id:', item)
+      for (const item of dataArray) {
+        if (!item || !item.id) {
+          logger.warn('[LinkedinService] Ignorando item sem id válido:', item)
           continue
         }
 
-        const current_company = item['current_company'] as { name?: string; title?: string } | undefined
-        const snapshotId = item['snapshotId']
+        const current_company = item.current_company as { name?: string; title?: string } | undefined
 
-        const linkedinUrlRaw: string | undefined =
-          typeof item['input_url'] === 'string'
-            ? item['input_url']
-            : typeof item['url'] === 'string'
-              ? item['url']
-              : undefined
+        // Normaliza a URL do LinkedIn
+        const linkedinUrlRaw =
+          typeof item.input_url === 'string' ? item.input_url : typeof item.url === 'string' ? item.url : ''
 
-        const linkedinUrl = normalizeLinkedinUrl(linkedinUrlRaw)
+        const linkedinUrl = normalizeLinkedInUrl(linkedinUrlRaw)
 
-        logger.info('[LinkedinService] Searching student in snapshots', {
-          snapshotId,
-          linkedinUrlRaw,
-          linkedinUrl,
-          itemId: item['id']
-        })
+        logger.info('[LinkedinService] Procurando student para URL', { linkedinUrl, itemId: item.id })
 
-        // 🔑 Busca dupla na tabela snapshots usando URL normalizada
-        let student: any
-        if (snapshotId && linkedinUrl) {
-          const snapshot = await trx('snapshots')
-            .where('snapshot', snapshotId)
-            .andWhere('linkedin', linkedinUrl)
-            .first()
+        // Busca o snapshot mais recente com essa URL
+        const snapshot = await trx('snapshots')
+          .where('linkedin', 'like', `%${linkedinUrl}%`)
+          .orderBy('id', 'desc') // id maior = mais recente
+          .first()
 
-          if (snapshot?.studentId) {
-            student = await trx('students').where('id', snapshot.studentId).first()
-            logger.info('[LinkedinService] Found studentId via snapshot', {
-              studentId: snapshot.studentId,
-              snapshotId,
-              linkedinUrl
-            })
-          }
-        }
-
-        if (!student) {
-          logger.warn('[LinkedinService] Student not found in snapshots', {
-            snapshotId,
+        if (!snapshot?.studentId) {
+          logger.warn('[LinkedinService] Nenhum snapshot encontrado para esta URL', {
             linkedinUrl,
-            itemId: item['id']
+            itemId: item.id
           })
           continue
         }
+
+        // Busca o student relacionado
+        const student = await trx('students').where('id', snapshot.studentId).first()
+
+        if (!student) {
+          logger.warn('[LinkedinService] Student não encontrado mesmo com snapshot', {
+            linkedinUrl,
+            snapshotId: snapshot.id,
+            itemId: item.id
+          })
+          continue
+        }
+
+        logger.info('[LinkedinService] Student encontrado', {
+          studentId: student.id,
+          snapshotId: snapshot.id
+        })
 
         // Monta dados para inserção/atualização na tabela linkedin
         const result = {
           studentId: student.id,
           company_name: current_company?.name ?? '',
           current_position: current_company?.title ?? '',
-          timestamp: item['timestamp'],
+          timestamp: item.timestamp,
           data: JSON.stringify(item),
           start_date: '',
           is_working: !!current_company?.name,
@@ -107,8 +97,10 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
 
         if (selectExisting.length > 0) {
           resultLinkedIn = await trx('linkedin').update(result).where('studentId', student.id)
+          logger.info('[LinkedinService] Registro linkedin existente atualizado', { studentId: student.id })
         } else {
           resultLinkedIn = await trx('linkedin').insert(result)
+          logger.info('[LinkedinService] Novo registro linkedin inserido', { studentId: student.id })
         }
 
         if (!resultLinkedIn) {
@@ -127,7 +119,7 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
           throw new Error('Erro ao atualizar dados do aluno.')
         }
 
-        logger.info('[LinkedinService] Updated student', {
+        logger.info('[LinkedinService] Student atualizado', {
           studentId: student.id,
           updatedFields: Object.entries(resultStudentData)
             .filter(([key, value]) => student[key] !== value)
@@ -136,9 +128,11 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
       }
 
       await trx.commit()
+      logger.info('[LinkedinService] Processamento concluído com sucesso.')
       return { status: 'OK', message: 'Processado com sucesso!' }
     } catch (err: any) {
       await trx.rollback()
+      logger.error('[LinkedinService] Erro ao processar dados de linkedin', { error: err })
       throw err
     }
   }
