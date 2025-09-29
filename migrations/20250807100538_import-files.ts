@@ -2,6 +2,7 @@
 import type { Knex } from 'knex'
 
 export async function up(knex: Knex): Promise<void> {
+  if (await knex.schema.hasTable('import-files')) return;
   await knex.schema.createTable('import-files', table => {
     table.increments('id')
 

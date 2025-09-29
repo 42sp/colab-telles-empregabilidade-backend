@@ -2,7 +2,8 @@ import type { Knex } from "knex";
 
 
 export async function up(knex: Knex): Promise<void> {
-	if (await knex.schema.hasTable('students')) return;
+	const exists = await knex.schema.hasTable('students');
+	if (exists) {
 	await knex.schema.alterTable('students', table => {
 		table.string('name').notNullable();
 		table.string('socialName');
@@ -121,6 +122,7 @@ export async function up(knex: Knex): Promise<void> {
 		table.string('excelProficiencyLevel');
 		table.string('powerPointProficiencyLevel');
 	})
+	}
 }
 
 

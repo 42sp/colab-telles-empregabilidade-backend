@@ -43,6 +43,7 @@ const corsOptions = {
   allowedHeaders: ['Content-Type','Authorization']
 };
 
+
 // Aplica CORS no Express (REST)
 app.use(cors(corsOptions))
 app.options('*', cors(corsOptions));
