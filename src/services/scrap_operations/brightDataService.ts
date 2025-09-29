@@ -2,6 +2,7 @@ import axios from 'axios'
 import type { Application } from '../../declarations'
 import type { ScrapOperations } from './scrapOperations.schema'
 import { logger } from '../../logger'
+import knex from 'knex';
 
 /**
  * Serviço responsável por disparar scrapers no BrightData e processar resultados
