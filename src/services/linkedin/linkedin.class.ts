@@ -35,39 +35,35 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
         }
 
         const current_company = item['current_company'] as { name?: string; title?: string } | undefined
-
-        // 🔑 Busca do studentId com snapshotId + linkedinUrl
-        let student: any
         const linkedinUrl = item['input_url'] ?? item['url']
         const snapshotId = item['snapshotId']
 
-        logger.info('[LinkedinService] Searching student', {
-          inputStudentId: item['studentId'],
+        logger.info('[LinkedinService] Searching student in snapshots', {
           snapshotId,
           linkedinUrl,
           itemId: item['id']
         })
 
-        if (item['studentId']) {
-          // Busca direta pelo studentId
-          student = await trx('students').where('id', item['studentId']).first()
-        } else if (snapshotId && linkedinUrl) {
-          // Busca na tabela snapshots combinando snapshotId e linkedinUrl
+        // 🔑 Busca dupla na tabela snapshots
+        let student: any
+        if (snapshotId && linkedinUrl) {
           const snapshot = await trx('snapshots')
-            .where('id', snapshotId)
+            .where('snapshot', snapshotId)
             .andWhere('linkedin', linkedinUrl)
             .first()
 
           if (snapshot?.studentId) {
             student = await trx('students').where('id', snapshot.studentId).first()
+            logger.info('[LinkedinService] Found studentId via snapshot', {
+              studentId: snapshot.studentId,
+              snapshotId,
+              linkedinUrl
+            })
           }
-        } else if (linkedinUrl) {
-          // Fallback: busca pelo linkedinUrl no students
-          student = await trx('students').whereLike('linkedin', `%${linkedinUrl}%`).first()
         }
 
         if (!student) {
-          logger.warn('[LinkedinService] Student not found', {
+          logger.warn('[LinkedinService] Student not found in snapshots', {
             snapshotId,
             linkedinUrl,
             itemId: item['id']
@@ -129,7 +125,6 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
     }
   }
 }
-
 
 export class LinkedinDashboardService<ServiceParams extends Params = LinkedinParams> extends KnexService<
   Linkedin,
