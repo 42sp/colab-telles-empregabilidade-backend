@@ -4,7 +4,7 @@ import { Request, Response } from 'express'
 
 export default function (app: Application) {
   app.post('/brightdata/webhook', async (req: Request, res: Response) => {
-    logger.info('[BrightDataWebhook] Webhook triggered', { body: req.body })
+    //logger.info('[BrightDataWebhook] Webhook triggered', { body: req.body })
 
     try {
       const results = req.body?.results || req.body

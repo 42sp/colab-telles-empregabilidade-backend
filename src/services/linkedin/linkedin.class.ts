@@ -110,7 +110,8 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
         // Atualiza dados do aluno na tabela students
         const resultStudentData = {
           working: !!current_company?.name,
-          organization: current_company?.name ?? null
+          organization: current_company?.name ?? null,
+		  
         }
 
         const resultStudent = await trx('students').update(resultStudentData).where('id', student.id)
