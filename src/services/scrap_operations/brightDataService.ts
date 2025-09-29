@@ -96,61 +96,79 @@ export class BrightDataService {
   }
 
   public async runOperation(op: ScrapOperations) {
-    const knex: Knex = this.app.get('postgresqlClient')  // ✅ Tipagem correta
-    const dbResults = await this.analyzeTargetConditions(op)
-    
-    if (!dbResults.length) {
-      logger.warn('[BrightDataService] No students match target_conditions', { operationId: op.id })
-      return []
-    }
+  const knex: Knex = this.app.get('postgresqlClient');
+  const dbResults = await this.analyzeTargetConditions(op);
 
-    const urls = dbResults
-      .map((s: any) => s.linkedin)
-      .filter(Boolean)
-      .map(this.normalizeLinkedinUrl)
-
-    if (!urls.length) {
-      logger.warn('[BrightDataService] No valid LinkedIn URLs found for operation', { operationId: op.id })
-      return []
-    }
-
-    const payload = urls.map(url => ({ url }))
-    const endpoint = `${this.apiBaseUrl}/datasets/v3/trigger`
-    const webhookUrl = process.env.BRIGHTDATA_WEBHOOK_URL
-
-    logger.info('[BrightDataService] Payload for BrightData trigger', { payload })
-
-    try {
-      const res = await axios.post(endpoint, payload, {
-        headers: {
-          Authorization: `Bearer ${this.apiToken}`,
-          'Content-Type': 'application/json'
-        },
-        params: {
-          dataset_id: this.linkedinDatasetId,
-          include_errors: true,
-          format: 'json',
-          uncompressed_webhook: true,
-          endpoint: webhookUrl
-        },
-        timeout: 60000
-      })
-
-      const snapshotId = res.data.snapshot_id
-      if (snapshotId) {
-        const inserts = dbResults.map(m => ({ linkedin: m.linkedin, snapshot: snapshotId }))
-        await knex('snapshots').insert(inserts)
-      }
-
-      return { message: 'Scraping triggered via dataset. Results will arrive via webhook.', snapshot_id: snapshotId }
-    } catch (err: any) {
-      logger.error('[BrightDataService] BrightData dataset trigger failed', {
-        operationId: op.id,
-        error: err?.message ?? String(err)
-      })
-      throw err
-    }
+  if (!dbResults.length) {
+    logger.warn('[BrightDataService] No students match target_conditions', { operationId: op.id });
+    return [];
   }
+
+  // Normaliza URLs e filtra apenas as válidas
+  const validStudents = dbResults
+    .map((s: any) => ({
+      id: s.id,
+      linkedin: s.linkedin
+    }))
+    .filter(s => s.linkedin)
+    .map(s => ({
+      ...s,
+      normalizedUrl: this.normalizeLinkedinUrl(s.linkedin)
+    }));
+
+  if (!validStudents.length) {
+    logger.warn('[BrightDataService] No valid LinkedIn URLs found for operation', { operationId: op.id });
+    return [];
+  }
+
+  // Envia apenas URLs válidas para o BrightData
+  const payload = validStudents.map(s => ({ url: s.normalizedUrl }));
+  const endpoint = `${this.apiBaseUrl}/datasets/v3/trigger`;
+  const webhookUrl = process.env.BRIGHTDATA_WEBHOOK_URL;
+
+  logger.info('[BrightDataService] Payload for BrightData trigger', { payload });
+
+  try {
+    const res = await axios.post(endpoint, payload, {
+      headers: {
+        Authorization: `Bearer ${this.apiToken}`,
+        'Content-Type': 'application/json'
+      },
+      params: {
+        dataset_id: this.linkedinDatasetId,
+        include_errors: true,
+        format: 'json',
+        uncompressed_webhook: true,
+        endpoint: webhookUrl
+      },
+      timeout: 60000
+    });
+
+    const snapshotId = res.data.snapshot_id;
+
+    // Salva os IDs dos estudantes que tiveram URLs válidas
+    const studentIdsForWebhook = validStudents.map(s => s.id);
+
+    if (snapshotId) {
+      // Apenas log ou registro de snapshot, opcional
+      await knex('snapshots').insert(
+        validStudents.map(s => ({ linkedin: s.linkedin, snapshot: snapshotId }))
+      );
+    }
+
+    return {
+      message: 'Scraping triggered via dataset. Results will arrive via webhook.',
+      snapshot_id: snapshotId,
+      studentIdsForWebhook
+    };
+  } catch (err: any) {
+    logger.error('[BrightDataService] BrightData dataset trigger failed', {
+      operationId: op.id,
+      error: err?.message ?? String(err)
+    });
+    throw err;
+  }
+}
 
   public async getResults(datasetId?: string) {
     const endpoint = `${this.apiBaseUrl}/datasets/v3/results`

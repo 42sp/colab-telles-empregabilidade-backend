@@ -8,7 +8,9 @@ export default function (app: Application) {
     logger.info('[BrightDataWebhook] Webhook triggered', { body: req.body })
 
     try {
+      // results é o array de resultados, studentIds é opcional e contém apenas IDs de alunos que tiveram URLs válidas
       const results = req.body?.results || req.body
+      const studentIdsForWebhook: number[] = req.body?.studentIdsForWebhook || []
 
       if (!Array.isArray(results)) {
         logger.warn('[BrightDataWebhook] Invalid payload format', { body: req.body })
@@ -16,7 +18,6 @@ export default function (app: Application) {
       }
 
       logger.info(`[BrightDataWebhook] Received ${results.length} items`)
-
       const knex = app.get('postgresqlClient')
 
       const processedResults: any[] = []
@@ -24,10 +25,18 @@ export default function (app: Application) {
 
       for (const r of results) {
         const rawData = r.data ?? r.result ?? r
-
         const linkedinUrl = rawData?.input_url || rawData?.url || rawData?.linkedin
+        const studentId = rawData?.studentId  // opcional se você enviar o ID junto no payload
+
         if (!linkedinUrl) {
           logger.warn('[BrightDataWebhook] Skipping result without linkedin url', { item: r })
+          skippedResults.push(r)
+          continue
+        }
+
+        // Se houver lista de IDs de estudantes válidos, só processa se estiver na lista
+        if (studentIdsForWebhook.length > 0 && studentId && !studentIdsForWebhook.includes(studentId)) {
+          logger.info('[BrightDataWebhook] Skipping result not in allowed studentIds list', { linkedin: linkedinUrl, studentId })
           skippedResults.push(r)
           continue
         }
@@ -35,44 +44,24 @@ export default function (app: Application) {
         try {
           // Mapeia os dados do Bright Data → campos da tabela students
           const updateData = mapBrightDataToStudentUpdate(rawData)
-
           if (Object.keys(updateData).length === 0) {
             logger.info('[BrightDataWebhook] Nothing to update for student', { linkedin: linkedinUrl })
             skippedResults.push(r)
             continue
           }
 
-          // Busca estudante existente
-          const student = await knex('students')
-            .where({ linkedin: linkedinUrl })
-            .first()
-
+          // Atualiza somente se o aluno já existir
+          const student = await knex('students').where({ linkedin: linkedinUrl }).first()
           if (!student) {
-            logger.info('[BrightDataWebhook] No student found, inserting new', {
-              linkedin: linkedinUrl,
-              updateData
-            })
-
-            await knex('students').insert({
-              linkedin: linkedinUrl,
-              ...updateData
-            })
-
-            processedResults.push({ linkedin: linkedinUrl, action: 'inserted', updateData })
-          } else {
-            logger.info('[BrightDataWebhook] Updating existing student', {
-              linkedin: linkedinUrl,
-              updateData
-            })
-
-            await knex('students')
-              .where({ linkedin: linkedinUrl })
-              .update(updateData)
-
-            processedResults.push({ linkedin: linkedinUrl, action: 'updated', updateData })
+            logger.info('[BrightDataWebhook] Student not found, skipping insert (avoids name NOT NULL error)', { linkedin: linkedinUrl })
+            skippedResults.push(r)
+            continue
           }
 
-          logger.info('[BrightDataWebhook] Successfully processed result', {
+          await knex('students').where({ linkedin: linkedinUrl }).update(updateData)
+          processedResults.push({ linkedin: linkedinUrl, action: 'updated', updateData })
+
+          logger.info('[BrightDataWebhook] Successfully updated student', {
             linkedin: linkedinUrl,
             operation_id: r.operation_id
           })
