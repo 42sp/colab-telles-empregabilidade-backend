@@ -55,10 +55,25 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
 						createdAt
 					};
 
-					const resultLinkedIn = await trx('linkedin').insert(result);
+					const selectExisting = await trx('linkedin').where('studentId', student.id);
+					let resultLinkedIn;
+
+					if (selectExisting) {
+						resultLinkedIn = await trx('linkedin').update(result).where('studentId', student.id);
+					} else {
+						resultLinkedIn = await trx('linkedin').insert(result);
+					}
 
 					if (!resultLinkedIn) {
 						throw new Error('Erro ao inserir dados de linkedin.');
+					}
+
+					const resultStudent = await trx('students').update({
+						working: current_company?.name ? true : false,
+					}).where('id', student.id);
+
+					if (!resultStudent) {
+						throw new Error('Erro ao atualizar dados do aluno.');
 					}
 				}
 			}
