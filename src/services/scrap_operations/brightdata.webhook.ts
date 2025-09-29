@@ -1,3 +1,4 @@
+// BrightDataWebhook.ts
 import { Application } from '../../declarations'
 import { logger } from '../../logger'
 import { Request, Response } from 'express'
@@ -8,7 +9,6 @@ export default function (app: Application) {
     logger.info('[BrightDataWebhook] Webhook triggered', { body: req.body })
 
     try {
-      // results é o array de resultados, studentIds é opcional e contém apenas IDs de alunos que tiveram URLs válidas
       const results = req.body?.results || req.body
       const studentIdsForWebhook: number[] = req.body?.studentIdsForWebhook || []
 
@@ -26,23 +26,25 @@ export default function (app: Application) {
       for (const r of results) {
         const rawData = r.data ?? r.result ?? r
         const linkedinUrl = rawData?.input_url || rawData?.url || rawData?.linkedin
-        const studentId = rawData?.studentId  // opcional se você enviar o ID junto no payload
+        const studentId = rawData?.studentId
 
-        if (!linkedinUrl) {
-          logger.warn('[BrightDataWebhook] Skipping result without linkedin url', { item: r })
+        if (!linkedinUrl || !studentId) {
+          logger.warn('[BrightDataWebhook] Skipping result without linkedin url or studentId', { item: r })
           skippedResults.push(r)
           continue
         }
 
-        // Se houver lista de IDs de estudantes válidos, só processa se estiver na lista
-        if (studentIdsForWebhook.length > 0 && studentId && !studentIdsForWebhook.includes(studentId)) {
-          logger.info('[BrightDataWebhook] Skipping result not in allowed studentIds list', { linkedin: linkedinUrl, studentId })
+        // Processa apenas IDs válidos
+        if (studentIdsForWebhook.length > 0 && !studentIdsForWebhook.includes(studentId)) {
+          logger.info('[BrightDataWebhook] Skipping result not in allowed studentIds list', {
+            linkedin: linkedinUrl,
+            studentId
+          })
           skippedResults.push(r)
           continue
         }
 
         try {
-          // Mapeia os dados do Bright Data → campos da tabela students
           const updateData = mapBrightDataToStudentUpdate(rawData)
           if (Object.keys(updateData).length === 0) {
             logger.info('[BrightDataWebhook] Nothing to update for student', { linkedin: linkedinUrl })
@@ -50,20 +52,22 @@ export default function (app: Application) {
             continue
           }
 
-          // Atualiza somente se o aluno já existir
-          const student = await knex('students').where({ linkedin: linkedinUrl }).first()
+          const student = await knex('students').where({ id: studentId }).first()
           if (!student) {
-            logger.info('[BrightDataWebhook] Student not found, skipping insert (avoids name NOT NULL error)', { linkedin: linkedinUrl })
+            logger.info('[BrightDataWebhook] Student not found, skipping update', {
+              linkedin: linkedinUrl,
+              studentId
+            })
             skippedResults.push(r)
             continue
           }
 
-          await knex('students').where({ linkedin: linkedinUrl }).update(updateData)
+          await knex('students').where({ id: studentId }).update(updateData)
           processedResults.push({ linkedin: linkedinUrl, action: 'updated', updateData })
 
           logger.info('[BrightDataWebhook] Successfully updated student', {
             linkedin: linkedinUrl,
-            operation_id: r.operation_id
+            studentId
           })
         } catch (err: any) {
           logger.error('[BrightDataWebhook] Failed to process individual result', {

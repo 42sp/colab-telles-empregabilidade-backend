@@ -1,12 +1,10 @@
+// BrightDataService.ts
 import axios from 'axios'
 import type { Application } from '../../declarations'
 import type { ScrapOperations } from './scrapOperations.schema'
 import { logger } from '../../logger'
 import type { Knex } from 'knex'
 
-/**
- * Serviço responsável por disparar scrapers no BrightData e processar resultados
- */
 export class BrightDataService {
   private app: Application
   private apiToken: string
@@ -14,15 +12,34 @@ export class BrightDataService {
   private linkedinDatasetId: string
   private datasetId: string
 
-  // Mapeamento sigla -> nome completo
   private stateMap: Record<string, string> = {
-    AC: "Acre", AL: "Alagoas", AM: "Amazonas", AP: "Amapá", BA: "Bahia",
-    CE: "Ceará", DF: "Distrito Federal", ES: "Espírito Santo", GO: "Goiás",
-    MA: "Maranhão", MG: "Minas Gerais", MS: "Mato Grosso do Sul", MT: "Mato Grosso",
-    PA: "Pará", PB: "Paraíba", PE: "Pernambuco", PI: "Piauí", PR: "Paraná",
-    RJ: "Rio de Janeiro", RN: "Rio Grande do Norte", RO: "Rondônia", RR: "Roraima",
-    RS: "Rio Grande do Sul", SC: "Santa Catarina", SE: "Sergipe", SP: "São Paulo",
-    TO: "Tocantins"
+    AC: 'Acre',
+    AL: 'Alagoas',
+    AM: 'Amazonas',
+    AP: 'Amapá',
+    BA: 'Bahia',
+    CE: 'Ceará',
+    DF: 'Distrito Federal',
+    ES: 'Espírito Santo',
+    GO: 'Goiás',
+    MA: 'Maranhão',
+    MG: 'Minas Gerais',
+    MS: 'Mato Grosso do Sul',
+    MT: 'Mato Grosso',
+    PA: 'Pará',
+    PB: 'Paraíba',
+    PE: 'Pernambuco',
+    PI: 'Piauí',
+    PR: 'Paraná',
+    RJ: 'Rio de Janeiro',
+    RN: 'Rio Grande do Norte',
+    RO: 'Rondônia',
+    RR: 'Roraima',
+    RS: 'Rio Grande do Sul',
+    SC: 'Santa Catarina',
+    SE: 'Sergipe',
+    SP: 'São Paulo',
+    TO: 'Tocantins'
   }
 
   constructor(app: Application) {
@@ -39,9 +56,7 @@ export class BrightDataService {
     const upper = trimmed.toUpperCase()
     if (this.stateMap[upper]) return this.stateMap[upper]
 
-    const found = Object.values(this.stateMap).find(
-      state => state.toLowerCase() === trimmed.toLowerCase()
-    )
+    const found = Object.values(this.stateMap).find(state => state.toLowerCase() === trimmed.toLowerCase())
     return found || trimmed
   }
 
@@ -53,7 +68,7 @@ export class BrightDataService {
       return []
     }
 
-    const knex: Knex = this.app.get('postgresqlClient')  // ✅ Tipagem correta
+    const knex: Knex = this.app.get('postgresqlClient')
     const filters = op.target_conditions as Array<{ field: string; value: string }>
     let query = knex('students').select('*')
 
@@ -70,19 +85,16 @@ export class BrightDataService {
         query = query.where(builder =>
           builder
             .whereILike(f.field, normalized)
-            .orWhereILike(f.field, Object.entries(this.stateMap).find(([sigla, nome]) => nome === normalized)?.[0] || '')
+            .orWhereILike(
+              f.field,
+              Object.entries(this.stateMap).find(([sigla, nome]) => nome === normalized)?.[0] || ''
+            )
         )
         continue
       }
 
       query = query.where(f.field, value)
     }
-
-    const sqlInfo = query.toSQL()
-    logger.debug('[BrightDataService] SQL query prepared', {
-      sql: sqlInfo.sql,
-      bindings: sqlInfo.bindings
-    })
 
     const dbResults = await query
 
@@ -96,97 +108,73 @@ export class BrightDataService {
   }
 
   public async runOperation(op: ScrapOperations) {
-  const knex: Knex = this.app.get('postgresqlClient');
-  const dbResults = await this.analyzeTargetConditions(op);
+    const knex: Knex = this.app.get('postgresqlClient')
+    const dbResults = await this.analyzeTargetConditions(op)
 
-  if (!dbResults.length) {
-    logger.warn('[BrightDataService] No students match target_conditions', { operationId: op.id });
-    return [];
-  }
-
-  // Normaliza URLs e filtra apenas as válidas
-  const validStudents = dbResults
-    .map((s: any) => ({
-      id: s.id,
-      linkedin: s.linkedin
-    }))
-    .filter(s => s.linkedin)
-    .map(s => ({
-      ...s,
-      normalizedUrl: this.normalizeLinkedinUrl(s.linkedin)
-    }));
-
-  if (!validStudents.length) {
-    logger.warn('[BrightDataService] No valid LinkedIn URLs found for operation', { operationId: op.id });
-    return [];
-  }
-
-  // Envia apenas URLs válidas para o BrightData
-  const payload = validStudents.map(s => ({ url: s.normalizedUrl }));
-  const endpoint = `${this.apiBaseUrl}/datasets/v3/trigger`;
-  const webhookUrl = process.env.BRIGHTDATA_WEBHOOK_URL;
-
-  logger.info('[BrightDataService] Payload for BrightData trigger', { payload });
-
-  try {
-    const res = await axios.post(endpoint, payload, {
-      headers: {
-        Authorization: `Bearer ${this.apiToken}`,
-        'Content-Type': 'application/json'
-      },
-      params: {
-        dataset_id: this.linkedinDatasetId,
-        include_errors: true,
-        format: 'json',
-        uncompressed_webhook: true,
-        endpoint: webhookUrl
-      },
-      timeout: 60000
-    });
-
-    const snapshotId = res.data.snapshot_id;
-
-    // Salva os IDs dos estudantes que tiveram URLs válidas
-    const studentIdsForWebhook = validStudents.map(s => s.id);
-
-    if (snapshotId) {
-      // Apenas log ou registro de snapshot, opcional
-      await knex('snapshots').insert(
-        validStudents.map(s => ({ linkedin: s.linkedin, snapshot: snapshotId }))
-      );
+    if (!dbResults.length) {
+      logger.warn('[BrightDataService] No students match target_conditions', { operationId: op.id })
+      return []
     }
 
-    return {
-      message: 'Scraping triggered via dataset. Results will arrive via webhook.',
-      snapshot_id: snapshotId,
-      studentIdsForWebhook
-    };
-  } catch (err: any) {
-    logger.error('[BrightDataService] BrightData dataset trigger failed', {
-      operationId: op.id,
-      error: err?.message ?? String(err)
-    });
-    throw err;
-  }
-}
+    // Normaliza URLs e inclui studentId
+    const validStudents = dbResults
+      .map((s: any) => ({
+        id: s.id,
+        linkedin: s.linkedin
+      }))
+      .filter(s => s.linkedin)
+      .map(s => ({
+        ...s,
+        normalizedUrl: this.normalizeLinkedinUrl(s.linkedin)
+      }))
 
-  public async getResults(datasetId?: string) {
-    const endpoint = `${this.apiBaseUrl}/datasets/v3/results`
+    if (!validStudents.length) {
+      logger.warn('[BrightDataService] No valid LinkedIn URLs found for operation', { operationId: op.id })
+      return []
+    }
+
+    // Envia payload com studentId + URL
+    const payload = validStudents.map(s => ({
+      url: s.normalizedUrl,
+      studentId: s.id
+    }))
+    const endpoint = `${this.apiBaseUrl}/datasets/v3/trigger`
+    const webhookUrl = process.env.BRIGHTDATA_WEBHOOK_URL
+
+    logger.info('[BrightDataService] Payload for BrightData trigger', { payload })
+
     try {
-      const res = await axios.get(endpoint, {
-        headers: { Authorization: `Bearer ${this.apiToken}` },
-        params: { dataset_id: datasetId || this.datasetId, format: 'json' }
+      const res = await axios.post(endpoint, payload, {
+        headers: {
+          Authorization: `Bearer ${this.apiToken}`,
+          'Content-Type': 'application/json'
+        },
+        params: {
+          dataset_id: this.linkedinDatasetId,
+          include_errors: true,
+          format: 'json',
+          uncompressed_webhook: true,
+          endpoint: webhookUrl
+        },
+        timeout: 60000
       })
 
-      logger.info('[BrightDataService] BrightData dataset fetched', {
-        datasetId: datasetId || this.datasetId,
-        count: Array.isArray(res.data) ? res.data.length : 'unknown'
-      })
+      const snapshotId = res.data.snapshot_id
 
-      return res.data
+      if (snapshotId) {
+        await knex('snapshots').insert(
+          validStudents.map(s => ({ linkedin: s.linkedin, snapshot: snapshotId }))
+        )
+      }
+
+      return {
+        message: 'Scraping triggered via dataset. Results will arrive via webhook.',
+        snapshot_id: snapshotId,
+        studentIdsForWebhook: validStudents.map(s => s.id)
+      }
     } catch (err: any) {
-      logger.error('[BrightDataService] Failed to fetch dataset', {
-        datasetId: datasetId || this.datasetId,
+      logger.error('[BrightDataService] BrightData dataset trigger failed', {
+        operationId: op.id,
         error: err?.message ?? String(err)
       })
       throw err
@@ -195,13 +183,13 @@ export class BrightDataService {
 
   private normalizeLinkedinUrl(url: string): string {
     if (!url) return ''
-    let splited = url.split("https:")
+    let splited = url.split('https:')
     if (splited[1]) url = splited[1]
-    splited = url.split("http:")
+    splited = url.split('http:')
     if (splited[1]) url = splited[1]
-    splited = url.split("//")
+    splited = url.split('//')
     if (splited[1]) url = splited[1]
-    splited = url.split("linkedin.com/")
+    splited = url.split('linkedin.com/')
     if (splited[1]) url = splited[1]
     splited = url.split('in/')
     if (splited[1]) url = splited[1]
