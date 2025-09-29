@@ -1,4 +1,3 @@
-// For more information about this file see https://dove.feathersjs.com/guides/cli/service.class.html#database-services
 import type { Id, Params } from '@feathersjs/feathers'
 import { KnexService } from '@feathersjs/knex'
 import type { KnexAdapterParams, KnexAdapterOptions } from '@feathersjs/knex'
@@ -37,75 +36,100 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
 
         const current_company = item['current_company'] as { name?: string; title?: string } | undefined
 
-        //Comentei a linha que faz a busca pelo linkedin e adicionei esse if que tenta pegar pelo studentId
-        //const student = await trx('students').whereLike('linkedin', `%${item['id']}%`).first()
+        // 🔑 Busca do studentId com snapshotId + linkedinUrl
+        let student: any
+        const linkedinUrl = item['input_url'] ?? item['url']
+        const snapshotId = item['snapshotId']
 
-        let student
         logger.info('[LinkedinService] Searching student', {
           inputStudentId: item['studentId'],
+          snapshotId,
+          linkedinUrl,
           itemId: item['id']
         })
+
         if (item['studentId']) {
+          // Busca direta pelo studentId
           student = await trx('students').where('id', item['studentId']).first()
-        } else {
-          student = await trx('students').whereLike('linkedin', `%${item['id']}%`).first()
+        } else if (snapshotId && linkedinUrl) {
+          // Busca na tabela snapshots combinando snapshotId e linkedinUrl
+          const snapshot = await trx('snapshots')
+            .where('id', snapshotId)
+            .andWhere('linkedin', linkedinUrl)
+            .first()
+
+          if (snapshot?.studentId) {
+            student = await trx('students').where('id', snapshot.studentId).first()
+          }
+        } else if (linkedinUrl) {
+          // Fallback: busca pelo linkedinUrl no students
+          student = await trx('students').whereLike('linkedin', `%${linkedinUrl}%`).first()
         }
 
-        if (student) {
-          const result = {
-            studentId: student.id,
-            company_name: current_company?.name ?? '',
-            current_position: current_company?.title ?? '',
-            timestamp: item['timestamp'],
-            data: JSON.stringify(item),
-            start_date: '',
-            is_working: current_company?.name ? true : false,
-            createdAt
-          }
-
-          const selectExisting = await trx('linkedin').where('studentId', student.id)
-          let resultLinkedIn
-
-          if (selectExisting.length > 0) {
-            resultLinkedIn = await trx('linkedin').update(result).where('studentId', student.id)
-          } else {
-            resultLinkedIn = await trx('linkedin').insert(result)
-          }
-
-          if (!resultLinkedIn) {
-            throw new Error('Erro ao inserir dados de linkedin.')
-          }
-
-          const resultStudentData = {
-            working: current_company?.name ? true : false,
-            organization: current_company?.name ?? null
-            //current_position: current_company?.title ?? null
-          }
-
-          const resultStudent = await trx('students').update(resultStudentData).where('id', student.id)
-
-          if (!resultStudent) {
-            throw new Error('Erro ao atualizar dados do aluno.')
-          }
-
-          logger.info('[LinkedinService] Updated student', {
-            studentId: student.id,
-            updatedFields: Object.entries(resultStudentData)
-              .filter(([key, value]) => student[key] !== value)
-              .map(([key, value]) => ({ field: key, oldValue: student[key], newValue: value }))
+        if (!student) {
+          logger.warn('[LinkedinService] Student not found', {
+            snapshotId,
+            linkedinUrl,
+            itemId: item['id']
           })
+          continue
         }
+
+        // Monta dados para inserção/atualização na tabela linkedin
+        const result = {
+          studentId: student.id,
+          company_name: current_company?.name ?? '',
+          current_position: current_company?.title ?? '',
+          timestamp: item['timestamp'],
+          data: JSON.stringify(item),
+          start_date: '',
+          is_working: !!current_company?.name,
+          createdAt
+        }
+
+        // Verifica se já existe registro do linkedin
+        const selectExisting = await trx('linkedin').where('studentId', student.id)
+        let resultLinkedIn
+
+        if (selectExisting.length > 0) {
+          resultLinkedIn = await trx('linkedin').update(result).where('studentId', student.id)
+        } else {
+          resultLinkedIn = await trx('linkedin').insert(result)
+        }
+
+        if (!resultLinkedIn) {
+          throw new Error('Erro ao inserir dados de linkedin.')
+        }
+
+        // Atualiza dados do aluno na tabela students
+        const resultStudentData = {
+          working: !!current_company?.name,
+          organization: current_company?.name ?? null
+        }
+
+        const resultStudent = await trx('students').update(resultStudentData).where('id', student.id)
+
+        if (!resultStudent) {
+          throw new Error('Erro ao atualizar dados do aluno.')
+        }
+
+        logger.info('[LinkedinService] Updated student', {
+          studentId: student.id,
+          updatedFields: Object.entries(resultStudentData)
+            .filter(([key, value]) => student[key] !== value)
+            .map(([key, value]) => ({ field: key, oldValue: student[key], newValue: value }))
+        })
       }
 
       await trx.commit()
-
-      return { status: 'OK', message: `Processado com sucesso!` }
+      return { status: 'OK', message: 'Processado com sucesso!' }
     } catch (err: any) {
       await trx.rollback()
       throw err
     }
   }
 }
+
 
 export class LinkedinDashboardService<ServiceParams extends Params = LinkedinParams> extends KnexService<
   Linkedin,
