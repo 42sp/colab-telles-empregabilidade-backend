@@ -38,9 +38,13 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
         const current_company = item['current_company'] as { name?: string; title?: string } | undefined
 
         //Comentei a linha que faz a busca pelo linkedin e adicionei esse if que tenta pegar pelo studentId
-		//const student = await trx('students').whereLike('linkedin', `%${item['id']}%`).first()
+        //const student = await trx('students').whereLike('linkedin', `%${item['id']}%`).first()
 
         let student
+        logger.info('[LinkedinService] Searching student', {
+          inputStudentId: item['studentId'],
+          itemId: item['id']
+        })
         if (item['studentId']) {
           student = await trx('students').where('id', item['studentId']).first()
         } else {
