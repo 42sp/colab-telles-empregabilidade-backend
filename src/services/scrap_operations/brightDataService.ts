@@ -2,7 +2,7 @@ import axios from 'axios'
 import type { Application } from '../../declarations'
 import type { ScrapOperations } from './scrapOperations.schema'
 import { logger } from '../../logger'
-import knex from 'knex';
+import type { Knex } from 'knex' 
 
 /**
  * Serviço responsável por disparar scrapers no BrightData e processar resultados
@@ -33,27 +33,18 @@ export class BrightDataService {
     this.datasetId = process.env.BRIGHTDATA_DATASET_ID || ''
   }
 
-  /**
-   * Normaliza valor de estado (sigla ou nome completo) para nome completo
-   */
   private normalizeStateFilter(value: string) {
     if (!value) return value
     const trimmed = value.trim()
-
-    // Se for sigla, retorna nome completo
     const upper = trimmed.toUpperCase()
     if (this.stateMap[upper]) return this.stateMap[upper]
 
-    // Se for nome completo, ajusta capitalização
     const found = Object.values(this.stateMap).find(
       state => state.toLowerCase() === trimmed.toLowerCase()
     )
     return found || trimmed
   }
 
-  /**
-   * Analisa o banco local de acordo com target_conditions
-   */
   public async analyzeTargetConditions(op: ScrapOperations) {
     if (!op.target_conditions || !Array.isArray(op.target_conditions)) {
       logger.warn('[BrightDataService] Operation has no target_conditions or invalid format', {
@@ -62,21 +53,18 @@ export class BrightDataService {
       return []
     }
 
-    const knex = this.app.get('postgresqlClient')
+    const knex: Knex = this.app.get('postgresqlClient')  // ✅ Tipagem correta
     const filters = op.target_conditions as Array<{ field: string; value: string }>
     let query = knex('students').select('*')
 
     for (const f of filters) {
       let value: any = f.value
-
-      // Conversão automática de booleanos
       const booleanFields = ['working', 'hasDisability']
       if (booleanFields.includes(f.field)) {
         if (value === 'true' || value === 'Sim') value = true
         else if (value === 'false' || value === 'Não') value = false
       }
 
-      // Conversão de estado
       if (f.field === 'currentState') {
         const normalized = this.normalizeStateFilter(value)
         query = query.where(builder =>
@@ -87,7 +75,6 @@ export class BrightDataService {
         continue
       }
 
-      // Aplicar filtro normal
       query = query.where(f.field, value)
     }
 
@@ -108,10 +95,8 @@ export class BrightDataService {
     return dbResults
   }
 
-  /**
-   * Executa operação no BrightData via dataset trigger (searchLinkedIn)
-   */
   public async runOperation(op: ScrapOperations) {
+    const knex: Knex = this.app.get('postgresqlClient')  // ✅ Tipagem correta
     const dbResults = await this.analyzeTargetConditions(op)
     
     if (!dbResults.length) {
