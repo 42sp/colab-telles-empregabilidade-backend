@@ -45,11 +45,15 @@ export const scrapOperationsSchema = Type.Object(
     started_at: Type.Optional(Type.Union([Type.String({ format: 'date-time' }), Type.Null()])), /** Data/hora de início da execução */
     finished_at: Type.Optional(Type.Union([Type.String({ format: 'date-time' }), Type.Null()])), /** Data/hora de término */
     result: Type.Optional(Type.Union([Type.Object({}, { additionalProperties: true }), Type.Null()])), /** Resultado da operação */
-    error_message: Type.Optional(Type.Union([Type.String(), Type.Null()])) /** Mensagem de erro em caso de falha */
+    error_message: Type.Optional(Type.Union([Type.String(), Type.Null()])), /** Mensagem de erro em caso de falha */
+
+    // ------------------------------
+    // 🔹 Condições para scraping
+    // ------------------------------
+    target_conditions: Type.Optional(Type.String()), /** Agora aceita apenas string */
   },
   { additionalProperties: false }
 )
-
 
 export type ScrapOperations = Static<typeof scrapOperationsSchema>
 
@@ -77,7 +81,8 @@ export const scrapOperationsQueryProperties = Type.Pick(scrapOperationsSchema, [
   'started_at',
   'finished_at',
   'result',
-  'error_message'
+  'error_message',
+  'target_conditions'
 ])
 
 export const scrapOperationsQuerySchema = Type.Intersect(
@@ -97,7 +102,8 @@ export const scrapOperationsDataSchema = Type.Intersect([
     'scheduled_date',
     'scheduled_time',
     'type',
-    'created_by'
+    'created_by',
+    'target_conditions'
   ]),
   Type.Partial(Type.Pick(scrapOperationsSchema, ['repeat_days', 'repeat_time']))
 ])
@@ -129,7 +135,8 @@ export const scrapOperationsPatchSchema = Type.Partial(
     'started_at',
     'finished_at',
     'result',
-    'error_message'
+    'error_message',
+    'target_conditions'
   ]),
   { additionalProperties: false }
 )

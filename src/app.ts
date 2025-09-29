@@ -21,7 +21,6 @@ import { authentication } from './authentication'
 import { services } from './services/index'
 import { channels } from './channels'
 
-
 const app: Application = express(feathers())
 
 // Load app configuration
@@ -32,24 +31,36 @@ app.configure(configuration(configurationValidator))
 // -------------------------
 const ENV = process.env.NODE_ENV || 'development'
 
+const allowedOrigins = [
+  'https://colab-telles-empregabilidade-frontend.onrender.com',
+  'https://temp-empregabilidade-frontend.eorpdr.easypanel.host'
+]
+
+// Permitir localhost em desenvolvimento
+if (ENV === 'development') {
+  allowedOrigins.push('http://localhost:5173')
+}
+
 const corsOptions = {
+<<<<<<< HEAD
   origin: [
     'http://localhost:5173',
     'https://colab-telles-empregabilidade-frontend.onrender.com',
     'https://temp-empregabilidade-frontend.eorpdr.easypanel.host'
   ],
+=======
+  origin: allowedOrigins,
+>>>>>>> ca047d7600de869903b9f470819ea24626b04933
   credentials: true,
   methods: ['GET','POST','PATCH','PUT','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization']
-};
-
+}
 
 // Aplica CORS no Express (REST)
 app.use(cors(corsOptions))
-app.options('*', cors(corsOptions));
+app.options('*', cors(corsOptions))
 app.use(json({ limit: '10mb' }))
 app.use(urlencoded({ extended: true, limit: '10mb' }))
-
 
 // Host the public folder
 app.use('/', serveStatic(app.get('public')))
@@ -61,10 +72,7 @@ app.configure(rest())
 app.configure(
   socketio({
     cors: {
-      origin: [
-        'https://colab-telles-empregabilidade-frontend.onrender.com',
-        'https://temp-empregabilidade-frontend.eorpdr.easypanel.host'
-      ],
+      origin: allowedOrigins,
       methods: ['GET', 'POST'],
       credentials: true
     }
@@ -74,7 +82,6 @@ app.configure(
 app.configure(postgresql)
 app.set('authentication', configAuthentication)
 app.configure(authentication)
-
 app.configure(services)
 
 // Logging de todas as requisições
