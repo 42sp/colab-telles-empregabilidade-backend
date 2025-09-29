@@ -11,6 +11,7 @@ export class BrightDataService {
   private apiBaseUrl: string
   private linkedinDatasetId: string
   private datasetId: string
+  private chunkSize: number
 
   private stateMap: Record<string, string> = {
     AC: 'Acre',
@@ -48,6 +49,7 @@ export class BrightDataService {
     this.apiBaseUrl = process.env.BRIGHTDATA_URL || 'https://api.brightdata.com/datasets/v3/trigger'
     this.linkedinDatasetId = process.env.BRIGHTDATA_LIKEDIN_DATASET_ID || ''
     this.datasetId = process.env.BRIGHTDATA_DATASET_ID || ''
+    this.chunkSize = parseInt(process.env.BRIGHTDATA_CHUNK_SIZE || '10', 10) 
   }
 
   private normalizeStateFilter(value: string) {
@@ -61,19 +63,16 @@ export class BrightDataService {
   }
 
   public async analyzeTargetConditions(op: ScrapOperations) {
-    const knex: Knex = this.app.get('postgresqlClient')
-    let query = knex('students').select('*')
-
-    // Se target_conditions não existe ou é inválido, considera todos os students
-    const filters = Array.isArray(op.target_conditions) ? op.target_conditions : []
-
-    if (!filters.length) {
-      logger.info('[BrightDataService] No target_conditions, selecting all students', {
+    if (!op.target_conditions || !Array.isArray(op.target_conditions)) {
+      logger.warn('[BrightDataService] Operation has no target_conditions or invalid format', {
         operationId: op.id
       })
-      const dbResults = await query
-      return dbResults
+      return []
     }
+
+    const knex: Knex = this.app.get('postgresqlClient')
+    const filters = op.target_conditions as Array<{ field: string; value: string }>
+    let query = knex('students').select('*')
 
     for (const f of filters) {
       let value: any = f.value
@@ -136,52 +135,71 @@ export class BrightDataService {
       return []
     }
 
-    // Envia payload com studentId + URL
-    const payload = validStudents.map(s => ({
-      url: s.normalizedUrl
-    }))
-    const endpoint = `${this.apiBaseUrl}/datasets/v3/trigger`
-    const webhookUrl = process.env.BRIGHTDATA_WEBHOOK_URL
+    // 🔑 Divide em chunks
+    const chunks: typeof validStudents[] = []
+    for (let i = 0; i < validStudents.length; i += this.chunkSize) {
+      chunks.push(validStudents.slice(i, i + this.chunkSize))
+    }
 
-    logger.info('[BrightDataService] Payload for BrightData trigger', { payload })
+    logger.info('[BrightDataService] Split students into chunks', {
+      operationId: op.id,
+      total: validStudents.length,
+      chunkSize: this.chunkSize,
+      chunks: chunks.length
+    })
 
-    try {
-      const res = await axios.post(endpoint, payload, {
-        headers: {
-          Authorization: `Bearer ${this.apiToken}`,
-          'Content-Type': 'application/json'
-        },
-        params: {
-          dataset_id: this.linkedinDatasetId,
-          include_errors: true,
-          format: 'json',
-          uncompressed_webhook: true,
-          endpoint: webhookUrl
-        },
-        timeout: 60000
-      })
+    const allSnapshotIds: string[] = []
 
-      const snapshotId = res.data.snapshot_id
+    for (const [index, chunk] of chunks.entries()) {
+      const payload = chunk.map(s => ({ url: s.normalizedUrl }))
+      const endpoint = `${this.apiBaseUrl}`
+      const webhookUrl = process.env.BRIGHTDATA_WEBHOOK_URL
 
-      await knex('snapshots').insert(
-        validStudents.map(s => ({
-          linkedin: s.linkedin,
-          snapshot: snapshotId,
-          studentId: s.id // 🔑 vínculo direto
-        }))
-      )
+      logger.info(`[BrightDataService] Triggering BrightData for chunk ${index + 1}/${chunks.length}`, { payload })
 
-      return {
-        message: 'Scraping triggered via dataset. Results will arrive via webhook.',
-        snapshot_id: snapshotId,
-        studentIdsForWebhook: validStudents.map(s => s.id)
+      try {
+        const res = await axios.post(endpoint, payload, {
+          headers: {
+            Authorization: `Bearer ${this.apiToken}`,
+            'Content-Type': 'application/json'
+          },
+          params: {
+            dataset_id: this.linkedinDatasetId,
+            include_errors: true,
+            format: 'json',
+            uncompressed_webhook: true,
+            endpoint: webhookUrl
+          },
+          timeout: 60000
+        })
+
+        const snapshotId = res.data.snapshot_id
+        allSnapshotIds.push(snapshotId)
+
+        await knex('snapshots').insert(
+          chunk.map(s => ({
+            linkedin: s.linkedin,
+            snapshot: snapshotId,
+            studentId: s.id, // 🔑 vínculo direto
+          }))
+        )
+
+        logger.info(`[BrightDataService] Snapshot ${snapshotId} stored for chunk ${index + 1}`, {
+          count: chunk.length
+        })
+      } catch (err: any) {
+        logger.error('[BrightDataService] BrightData dataset trigger failed', {
+          operationId: op.id,
+          chunk: index + 1,
+          error: err?.message ?? String(err)
+        })
       }
-    } catch (err: any) {
-      logger.error('[BrightDataService] BrightData dataset trigger failed', {
-        operationId: op.id,
-        error: err?.message ?? String(err)
-      })
-      throw err
+    }
+
+    return {
+      message: 'Scraping triggered via dataset. Results will arrive via webhook.',
+      snapshot_ids: allSnapshotIds,
+      totalStudents: validStudents.length
     }
   }
 
