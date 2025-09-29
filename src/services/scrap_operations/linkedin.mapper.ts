@@ -59,7 +59,8 @@ export function mapBrightDataToStudentUpdate(profile: BrightDataProfile) {
   logger.info('[LinkedinMapper] Mapping BrightData profile', {
     id: profile.id,
     url: profile.url || profile.input_url,
-    name: profile.name
+    // só loga name para referência, não atualiza
+    name: profile.name 
   })
 
   const update: Record<string, any> = {}
