@@ -61,16 +61,19 @@ export class BrightDataService {
   }
 
   public async analyzeTargetConditions(op: ScrapOperations) {
-    if (!op.target_conditions || !Array.isArray(op.target_conditions)) {
-      logger.warn('[BrightDataService] Operation has no target_conditions or invalid format', {
+    const knex: Knex = this.app.get('postgresqlClient')
+    let query = knex('students').select('*')
+
+    // Se target_conditions não existe ou é inválido, considera todos os students
+    const filters = Array.isArray(op.target_conditions) ? op.target_conditions : []
+
+    if (!filters.length) {
+      logger.info('[BrightDataService] No target_conditions, selecting all students', {
         operationId: op.id
       })
-      return []
+      const dbResults = await query
+      return dbResults
     }
-
-    const knex: Knex = this.app.get('postgresqlClient')
-    const filters = op.target_conditions as Array<{ field: string; value: string }>
-    let query = knex('students').select('*')
 
     for (const f of filters) {
       let value: any = f.value
@@ -164,7 +167,7 @@ export class BrightDataService {
         validStudents.map(s => ({
           linkedin: s.linkedin,
           snapshot: snapshotId,
-          studentId: s.id, // 🔑 vínculo direto
+          studentId: s.id // 🔑 vínculo direto
         }))
       )
 
