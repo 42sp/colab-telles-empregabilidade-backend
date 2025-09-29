@@ -3,7 +3,7 @@ import { Knex } from "knex";
 export async function up(knex: Knex): Promise<void> {
   // Habilita extensão pgcrypto (se ainda não tiver)
   await knex.raw(`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`);
-
+if (await knex.schema.hasTable('scrap_operations')) return;
   await knex.schema.createTable("scrap_operations", (table) => {
     table.increments("id").primary(); // PK
 

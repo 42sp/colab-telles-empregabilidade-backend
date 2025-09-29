@@ -42,7 +42,11 @@ if (ENV === 'development') {
 }
 
 const corsOptions = {
-  origin: allowedOrigins,
+  origin: [
+    'http://localhost:5173',
+    'https://colab-telles-empregabilidade-frontend.onrender.com',
+    'https://temp-empregabilidade-frontend.eorpdr.easypanel.host'
+  ],
   credentials: true,
   methods: ['GET','POST','PATCH','PUT','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization']

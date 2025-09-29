@@ -55,10 +55,25 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
 						createdAt
 					};
 
-					const resultLinkedIn = await trx('linkedin').insert(result);
+					const selectExisting = await trx('linkedin').where('studentId', student.id);
+					let resultLinkedIn;
+
+					if (selectExisting.length > 0) {
+						resultLinkedIn = await trx('linkedin').update(result).where('studentId', student.id);
+					} else {
+						resultLinkedIn = await trx('linkedin').insert(result);
+					}
 
 					if (!resultLinkedIn) {
 						throw new Error('Erro ao inserir dados de linkedin.');
+					}
+
+					const resultStudent = await trx('students').update({
+						working: current_company?.name ? true : false,
+					}).where('id', student.id);
+
+					if (!resultStudent) {
+						throw new Error('Erro ao atualizar dados do aluno.');
 					}
 				}
 			}
@@ -205,7 +220,7 @@ export class LinkedinDashboardService<ServiceParams extends Params = LinkedinPar
 			sectorDistribution: sectorDistributionRaw.map(item => ({
 				name: item.name ? item.name : 'Não Consta',
 				value: Number(item.value)
-			})).filter(item => item.name !== 'Não Consta'),
+			})),
 			statusSync: {
 				lastSync: lastSynchronization?.last_sync,
 				status: 'Sincronizado',

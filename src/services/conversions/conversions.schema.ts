@@ -58,7 +58,9 @@ export const conversionsSchema = Type.Object({
 	generalPriority: Type.Number(),
 	automaticVerificationFormula: Type.Optional(Type.String()),
 	automaticVerification: Type.Boolean(),
-	timeValidation: Type.Boolean()
+	timeValidation: Type.Boolean(),
+
+	importedFilesId: Type.Optional(Type.Number())
 }, {
 	$id: 'Conversions',
 	additionalProperties: false
