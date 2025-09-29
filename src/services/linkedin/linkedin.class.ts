@@ -44,8 +44,14 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
         }
 
         const current_company = item['current_company'] as { name?: string; title?: string } | undefined
-        const linkedinUrlRaw = item['input_url'] ?? item['url']
         const snapshotId = item['snapshotId']
+
+        const linkedinUrlRaw: string | undefined =
+          typeof item['input_url'] === 'string'
+            ? item['input_url']
+            : typeof item['url'] === 'string'
+              ? item['url']
+              : undefined
 
         const linkedinUrl = normalizeLinkedinUrl(linkedinUrlRaw)
 
