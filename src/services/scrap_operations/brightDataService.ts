@@ -160,11 +160,13 @@ export class BrightDataService {
 
       const snapshotId = res.data.snapshot_id
 
-      if (snapshotId) {
-        await knex('snapshots').insert(
-          validStudents.map(s => ({ linkedin: s.linkedin, snapshot: snapshotId }))
-        )
-      }
+      await knex('snapshots').insert(
+        validStudents.map(s => ({
+          linkedin: s.linkedin,
+          snapshot: snapshotId,
+          studentId: s.id, // 🔑 vínculo direto
+        }))
+      )
 
       return {
         message: 'Scraping triggered via dataset. Results will arrive via webhook.',

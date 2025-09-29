@@ -2,7 +2,7 @@
 import type { Id, Params } from '@feathersjs/feathers'
 import { KnexService } from '@feathersjs/knex'
 import type { KnexAdapterParams, KnexAdapterOptions } from '@feathersjs/knex'
-import { logger } from '../../logger';
+import { logger } from '../../logger'
 
 import type { Application } from '../../declarations'
 import type { Linkedin, LinkedinData, LinkedinPatch, LinkedinQuery } from './linkedin.schema'
@@ -37,7 +37,15 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
 
         const current_company = item['current_company'] as { name?: string; title?: string } | undefined
 
-        const student = await trx('students').whereLike('linkedin', `%${item['id']}%`).first()
+        //Comentei a linha que faz a busca pelo linkedin e adicionei esse if que tenta pegar pelo studentId
+		//const student = await trx('students').whereLike('linkedin', `%${item['id']}%`).first()
+
+        let student
+        if (item['studentId']) {
+          student = await trx('students').where('id', item['studentId']).first()
+        } else {
+          student = await trx('students').whereLike('linkedin', `%${item['id']}%`).first()
+        }
 
         if (student) {
           const result = {
@@ -66,7 +74,7 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
 
           const resultStudentData = {
             working: current_company?.name ? true : false,
-            organization: current_company?.name ?? null,
+            organization: current_company?.name ?? null
             //current_position: current_company?.title ?? null
           }
 
