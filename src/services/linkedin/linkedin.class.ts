@@ -58,7 +58,7 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
 					const selectExisting = await trx('linkedin').where('studentId', student.id);
 					let resultLinkedIn;
 
-					if (selectExisting) {
+					if (selectExisting.length > 0) {
 						resultLinkedIn = await trx('linkedin').update(result).where('studentId', student.id);
 					} else {
 						resultLinkedIn = await trx('linkedin').insert(result);
