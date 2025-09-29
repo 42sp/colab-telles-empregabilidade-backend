@@ -18,7 +18,6 @@ export default function (app: Application) {
 
     try {
       const results = req.body?.results || req.body;
-      const studentIdsForWebhook: number[] = req.body?.studentIdsForWebhook || [];
 
       if (!Array.isArray(results)) {
         logger.warn('[BrightDataWebhook] Invalid payload format', { body: req.body });
@@ -29,34 +28,37 @@ export default function (app: Application) {
 
       const processedResults: any[] = [];
       const skippedResults: any[] = [];
+      const knex = app.get('postgresqlClient');
 
       for (const r of results) {
         const rawData = r.data ?? r.result ?? r;
         const linkedinUrl = rawData?.input_url || rawData?.url || rawData?.linkedin;
-        const studentId = rawData?.studentId;
 
-        if (!linkedinUrl || !studentId) {
-          logger.warn('[BrightDataWebhook] Skipping result without linkedin url or studentId', { item: r });
-          skippedResults.push(r);
-          continue;
-        }
-
-        if (studentIdsForWebhook.length > 0 && !studentIdsForWebhook.includes(studentId)) {
-          logger.info('[BrightDataWebhook] Skipping result not in allowed studentIds list', { linkedin: linkedinUrl, studentId });
+        if (!linkedinUrl) {
+          logger.warn('[BrightDataWebhook] Skipping result without linkedin url', { item: r });
           skippedResults.push(r);
           continue;
         }
 
         try {
-          const updateData = mapBrightDataToStudentUpdate(rawData);
+          // Busca o studentId pelo linkedinUrl na tabela linkedin
+          const existingLinkedin = await knex('linkedin').where({ studentId: knex('students').select('id').where('linkedin', linkedinUrl) }).first();
+          const studentId = existingLinkedin?.studentId;
 
-          if (Object.keys(updateData).length === 0) {
-            logger.info('[BrightDataWebhook] Nothing to update for student', { linkedin: linkedinUrl });
+          if (!studentId) {
+            logger.warn('[BrightDataWebhook] Skipping result: studentId not found for linkedin', { linkedinUrl });
             skippedResults.push(r);
             continue;
           }
 
-          // Salva diretamente no LinkedinService
+          const updateData = mapBrightDataToStudentUpdate(rawData);
+          if (Object.keys(updateData).length === 0) {
+            logger.info('[BrightDataWebhook] Nothing to update for student', { linkedinUrl });
+            skippedResults.push(r);
+            continue;
+          }
+
+          // Salva dados no LinkedinService
           await linkedinService.create({
             studentId,
             company_name: updateData.company_name || '',
@@ -67,8 +69,7 @@ export default function (app: Application) {
             data: JSON.stringify(rawData)
           });
 
-          // Atualiza os dados do aluno usando o próprio service do students se tiver, ou knex direto
-          const knex = app.get('postgresqlClient');
+          // Atualiza dados do aluno
           await knex('students').where({ id: studentId }).update({
             current_position: updateData.current_position || undefined,
             company_name: updateData.company_name || undefined,
