@@ -11,7 +11,7 @@ import type { UserService } from './users.class'
 export const userSchema = {
   $id: 'User',
   type: 'object',
-  additionalProperties: false,
+  additionalProperties: true,
   required: ['id', 'email', 'password', 'name'],
   properties: {
     id: { type: 'number' },
