@@ -16,7 +16,7 @@ export class StudentsStats {
 	// Custom find method that returns stats
 	async find(params?: StudentsStatsParams): Promise<StatsResult> {
 		const total_students : any = await this.Model('students').count('id', { as: 'total' }).first();
-		const working_students : any = await this.Model('linkedin').where('is_working', true).count('id', { as: 'total' }).first();
+		const working_students : any = await this.Model('students').where('working', true).count('id', { as: 'total' }).first();
 
 		const avgCompensation = 0; // Implement your compensation logic here if needed
 
