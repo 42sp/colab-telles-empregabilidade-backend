@@ -156,7 +156,7 @@ export class LinkedinDashboardService<ServiceParams extends Params = LinkedinPar
       .select(
         this.Model.raw(`DATE_TRUNC('month', "createdAt") as month`),
         this.Model.raw(`SUM(CASE WHEN working THEN 1 ELSE 0 END) as trabalhando`),
-        this.Model.raw(`SUM(CASE WHEN working = false THEN 1 ELSE 0 END) as sem_trabalho`)
+        this.Model.raw(`SUM(CASE WHEN working THEN 0 ELSE 1 END) as sem_trabalho`)
       )
       .groupByRaw(`DATE_TRUNC('month', "createdAt")`)
       .orderBy('month', 'asc')
