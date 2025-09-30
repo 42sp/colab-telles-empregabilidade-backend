@@ -36,7 +36,9 @@ export const userDataSchema = {
   additionalProperties: false,
   required: ['id', 'email', 'password', 'name'],
   properties: {
-    ...userSchema.properties
+    ...userSchema.properties,
+    created_at: { type: 'string', format: 'date-time' },
+    updated_at: { type: 'string', format: 'date-time' } 
   }
 } as const
 export type UserData = FromSchema<typeof userDataSchema>
