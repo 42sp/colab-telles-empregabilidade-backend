@@ -49,7 +49,7 @@ export const userDataResolver = resolve<UserData, HookContext<UserService>>({
 export const userPatchSchema = {
   $id: 'UserPatch',
   type: 'object',
-  additionalProperties: false,
+  additionalProperties: true,
   required: [],
   properties: {
     ...userSchema.properties
