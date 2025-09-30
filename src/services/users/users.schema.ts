@@ -11,7 +11,7 @@ import type { UserService } from './users.class'
 export const userSchema = {
   $id: 'User',
   type: 'object',
-  additionalProperties: true,
+  additionalProperties: false,
   required: ['id', 'email', 'password', 'name'],
   properties: {
     id: { type: 'number' },
@@ -33,7 +33,7 @@ export const userExternalResolver = resolve<User, HookContext<UserService>>({
 export const userDataSchema = {
   $id: 'UserData',
   type: 'object',
-  additionalProperties: true,
+  additionalProperties: false,
   required: ['id', 'email', 'password', 'name'],
   properties: {
     ...userSchema.properties
@@ -49,7 +49,7 @@ export const userDataResolver = resolve<UserData, HookContext<UserService>>({
 export const userPatchSchema = {
   $id: 'UserPatch',
   type: 'object',
-  additionalProperties: true,
+  additionalProperties: false,
   required: [],
   properties: {
     ...userSchema.properties
@@ -65,7 +65,7 @@ export const userPatchResolver = resolve<UserPatch, HookContext<UserService>>({
 export const userQuerySchema = {
   $id: 'UserQuery',
   type: 'object',
-  additionalProperties: true,
+  additionalProperties: false,
   properties: {
     ...querySyntax(userSchema.properties)
   }
