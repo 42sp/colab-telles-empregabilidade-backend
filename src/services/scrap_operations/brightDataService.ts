@@ -1,4 +1,3 @@
-// BrightDataService.ts
 import axios from 'axios'
 import type { Application } from '../../declarations'
 import type { ScrapOperations } from './scrapOperations.schema'
@@ -51,7 +50,7 @@ export class BrightDataService {
       'https://api.brightdata.com/datasets/v3/trigger'
     this.linkedinDatasetId = process.env.BRIGHTDATA_LIKEDIN_DATASET_ID || ''
     this.datasetId = process.env.BRIGHTDATA_DATASET_ID || ''
-    this.chunkSize = 10 // 🔑 fixo: envia em chunks de 10
+    this.chunkSize = 10 
   }
 
   private normalizeStateFilter(value: string) {

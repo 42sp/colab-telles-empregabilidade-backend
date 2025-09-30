@@ -133,15 +133,12 @@ export function setupScrapOperationsCron(app: Application) {
               logger.warn("[Cron] emit(patched) failed for start", { operationId: op.id, error: String(emitErr) });
             }
 
-            await sleep(2000);
-
             current = (typeof service.get === "function") ? await service.get(op.id) : started;
             if (current.status !== "Em Execução") {
               logger.info("[Cron] Not finishing because status changed", { id: op.id, status: current.status });
               continue;
             }
 
-            // 🔹 Aqui chamamos o BrightDataService
             try {
               const brightDataResults = await brightDataService.runOperation(current as ScrapOperations);
 
