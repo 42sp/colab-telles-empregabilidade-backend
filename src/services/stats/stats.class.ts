@@ -18,7 +18,32 @@ export class StudentsStats {
 		const total_students : any = await this.Model('students').count('id', { as: 'total' }).first();
 		const working_students : any = await this.Model('students').where('working', true).count('id', { as: 'total' }).first();
 
-		const avgCompensation = 0; // Implement your compensation logic here if needed
+		let compensationSum = 0;
+		let compensationCount = 0;
+		let skip = 0;
+		const limit = 100;
+		while (true) {
+			const result: any = await this.Model('students')
+				.select('*')
+				.limit(limit)
+				.offset(skip);
+
+			if (!result || result.length === 0) break;
+
+			// soma salários > 0
+			result.forEach((s: any) => {
+				const salary = Number(s.compensation);
+				if (!isNaN(salary) && salary > 0) {
+					compensationSum += salary;
+					compensationCount++;
+				}
+			});
+
+			skip += result.length;
+		}
+
+		const avgCompensation =
+			compensationCount > 0 ? Math.round(compensationSum / compensationCount) : 0;
 
 		return {
 			total: total_students.total,
@@ -28,5 +53,3 @@ export class StudentsStats {
 		};
 	}
 }
-
-
