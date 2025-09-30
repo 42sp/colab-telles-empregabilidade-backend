@@ -56,8 +56,10 @@ export const scrapOperationsSchema = Type.Object(
     ) /** Data/hora de término */,
     result: Type.Optional(
       Type.Union([
-        Type.Object({}, { additionalProperties: true }), // aceita objeto livre
-        Type.Null() // aceita null
+        Type.Object({}, { additionalProperties: true }),
+        Type.Array(Type.Any()), // aceita arrays
+        Type.String(), // aceita strings
+        Type.Null()
       ])
     ),
     error_message: Type.Optional(
