@@ -33,7 +33,7 @@ export const userExternalResolver = resolve<User, HookContext<UserService>>({
 export const userDataSchema = {
   $id: 'UserData',
   type: 'object',
-  additionalProperties: false,
+  additionalProperties: true,
   required: ['id', 'email', 'password', 'name'],
   properties: {
     ...userSchema.properties
@@ -65,7 +65,7 @@ export const userPatchResolver = resolve<UserPatch, HookContext<UserService>>({
 export const userQuerySchema = {
   $id: 'UserQuery',
   type: 'object',
-  additionalProperties: false,
+  additionalProperties: true,
   properties: {
     ...querySyntax(userSchema.properties)
   }
