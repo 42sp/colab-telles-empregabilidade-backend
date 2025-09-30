@@ -111,7 +111,7 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
         const resultStudentData = {
           working: !!current_company?.name,
           organization: current_company?.name ?? null,
-		  
+
         }
 
         const resultStudent = await trx('students').update(resultStudentData).where('id', student.id)
@@ -148,15 +148,15 @@ export class LinkedinDashboardService<ServiceParams extends Params = LinkedinPar
   async find(params?: LinkedinParams): Promise<any> {
     const linkedin: any = await super.find(params)
     const total_students: any = await this.Model('students').count('id', { as: 'total' }).first()
-    const working_students: any = await this.Model('linkedin')
-      .where('is_working', true)
+    const working_students: any = await this.Model('students')
+      .where('working', true)
       .count('id', { as: 'total' })
       .first()
-    const employmentByMonth: any = await this.Model('linkedin')
+    const employmentByMonth: any = await this.Model('students')
       .select(
         this.Model.raw(`DATE_TRUNC('month', "createdAt") as month`),
-        this.Model.raw(`SUM(CASE WHEN is_working THEN 1 ELSE 0 END) as trabalhando`),
-        this.Model.raw(`SUM(CASE WHEN is_working = false THEN 1 ELSE 0 END) as sem_trabalho`)
+        this.Model.raw(`SUM(CASE WHEN working THEN 1 ELSE 0 END) as trabalhando`),
+        this.Model.raw(`SUM(CASE WHEN working = false THEN 1 ELSE 0 END) as sem_trabalho`)
       )
       .groupByRaw(`DATE_TRUNC('month', "createdAt")`)
       .orderBy('month', 'asc')
