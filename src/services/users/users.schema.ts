@@ -12,9 +12,9 @@ export const userSchema = {
   $id: 'User',
   type: 'object',
   additionalProperties: false,
-  required: ['id', 'email', 'password', 'name'],
+  required: ['email', 'password', 'name'],
   properties: {
-    id: { type: 'number' },
+    id: { type: 'string', format: 'uuid' },
     email: { type: 'string' },
     password: { type: 'string' },
     name: { type: 'string' }
@@ -34,7 +34,7 @@ export const userDataSchema = {
   $id: 'UserData',
   type: 'object',
   additionalProperties: false,
-  required: ['id', 'email', 'password', 'name'],
+  required: ['email', 'password', 'name'],
   properties: {
     ...userSchema.properties
   }
