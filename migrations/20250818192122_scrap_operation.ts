@@ -32,6 +32,7 @@ if (await knex.schema.hasTable('scrap_operations')) return;
     table.timestamp("finished_at");
     table.jsonb("result");
     table.text("error_message");
+    table.jsonb("target_conditions");
   });
 }
 
