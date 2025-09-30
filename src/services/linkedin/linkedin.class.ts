@@ -6,6 +6,7 @@ import type { KnexAdapterParams, KnexAdapterOptions } from '@feathersjs/knex'
 import type { Application } from '../../declarations'
 import type { Linkedin, LinkedinData, LinkedinPatch, LinkedinQuery } from './linkedin.schema'
 import { link } from 'fs'
+import axios from 'axios'
 
 export type { Linkedin, LinkedinData, LinkedinPatch, LinkedinQuery }
 
@@ -31,6 +32,18 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
 			{
 				let result = undefined;
 				const current_company = item["current_company"] as { name?: string; title?: string } | undefined;
+
+				if (current_company?.name && current_company.title)
+				{
+					try {
+						await axios.post("http://localhost:3000/glassdoor", {
+							company: current_company.name,
+							jobTitle: current_company.title
+						})
+					} catch (error) {
+						console.error('Erro ao processar current_company:', error);
+					}
+				}
 
 				const student = await this.Model('students')
 					.whereLike('linkedin', `%${item["id"]}%`)

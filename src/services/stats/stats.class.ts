@@ -15,7 +15,7 @@ export class StudentsStats implements Pick<ServiceMethods<any>, "find">{
 		let total = 0;
 		let working = 0;
 		let compensationSum = 0;
-		let compensationCount = 0; // só quem tem salário > 0
+		let compensationCount = 0;
 	  
 		while (true) {
 		  const result: any = await this.app.service("students").find({
