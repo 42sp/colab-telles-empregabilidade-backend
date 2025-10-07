@@ -29,9 +29,6 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
 
       const createdAt = new Date().toISOString()
 
-      const normalizeLinkedInUrl = (url: string) =>
-        url.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, '').replace(/\/$/, '')
-
       for (const item of dataArray) {
         if (!item || !item.id) {
           logger.warn('[LinkedinService] Ignorando item sem id válido:', item)
@@ -40,35 +37,13 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
 
         const current_company = item.current_company as { name?: string; title?: string } | undefined
 
-        // Normaliza a URL do LinkedIn
-        const linkedinUrlRaw =
-          typeof item.input_url === 'string' ? item.input_url : typeof item.url === 'string' ? item.url : ''
-
-        const linkedinUrl = normalizeLinkedInUrl(linkedinUrlRaw)
-
-        logger.info('[LinkedinService] Procurando student para URL', { linkedinUrl, itemId: item.id })
-
-        // Busca o snapshot mais recente com essa URL
-        const snapshot = await trx('snapshots')
-          .where('linkedin', 'like', `%${linkedinUrl}%`)
-          .orderBy('id', 'desc') // id maior = mais recente
-          .first()
-
-        if (!snapshot?.studentId) {
-          logger.warn('[LinkedinService] Nenhum snapshot encontrado para esta URL', {
-            linkedinUrl,
-            itemId: item.id
-          })
-          continue
-        }
-
-        // Busca o student relacionado
-        const student = await trx('students').where('id', snapshot.studentId).first()
+				const inputUrl = (item as any).input?.url;
+				// Busca o student relacionado
+        const student = await trx('students').where('linkedin', inputUrl).first()
 
         if (!student) {
           logger.warn('[LinkedinService] Student não encontrado mesmo com snapshot', {
-            linkedinUrl,
-            snapshotId: snapshot.id,
+            inputUrl,
             itemId: item.id
           })
           continue
@@ -76,7 +51,6 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
 
         logger.info('[LinkedinService] Student encontrado', {
           studentId: student.id,
-          snapshotId: snapshot.id
         })
 
         // Monta dados para inserção/atualização na tabela linkedin
