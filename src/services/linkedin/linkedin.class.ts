@@ -88,10 +88,10 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
         })
 
         const startDate = parseDateForPostgres(item.experience?.[0]?.start_date ??
-          item.experience?.positions?.[0]?.start_date ??
+          item.experience?.[0].positions?.[0]?.start_date ??
           '');
         const endDate = parseDateForPostgres(item.experience?.[0]?.end_date ??
-          item.experience?.positions?.[0]?.end_date ??
+          item.experience?.[0].positions?.[0]?.end_date ??
           '');
 
         // Monta dados para inserção/atualização na tabela linkedin
