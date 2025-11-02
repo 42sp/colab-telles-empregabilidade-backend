@@ -127,8 +127,8 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
           working: !!current_company?.name && filterIsmartAndBolsista(current_company?.name) !== null,
           organization: filterIsmartAndBolsista(current_company?.name) ?? null,
           details: filterIsmartAndBolsista(current_company?.title) ?? null,
-          startDate: startDate && filterIsmartAndBolsista(current_company?.name) !== null,
-          endDate: endDate && filterIsmartAndBolsista(current_company?.name) !== null,
+          startDate: filterIsmartAndBolsista(current_company?.name) !== null ? startDate : null,
+          endDate: filterIsmartAndBolsista(current_company?.name) !== null ? endDate : null,
         }
 
         const resultStudent = await trx('students').update(resultStudentData).where('id', student.id)
