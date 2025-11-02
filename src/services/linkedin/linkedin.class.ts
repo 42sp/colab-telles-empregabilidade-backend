@@ -102,7 +102,7 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
           timestamp: item.timestamp,
           data: JSON.stringify(item),
           start_date: startDate,
-          is_working: !!current_company?.name,
+          is_working: !!current_company?.name && filterIsmartAndBolsista(current_company?.name) !== null,
           createdAt
         }
 
