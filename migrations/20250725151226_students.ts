@@ -34,11 +34,11 @@ export async function up(knex: Knex): Promise<void> {
 		table.string('currentAggregatedLocation').notNullable();
 		table.string('currentShift').notNullable();
 
-		table.string('holderContractStatus').notNullable();
-		table.string('realStatus').notNullable();
+		//table.string('holderContractStatus').notNullable();
+		//table.string('realStatus').notNullable();
 		table.string('realProfile').notNullable();
-		table.string('hrProfile').notNullable();
-		table.string('targetStatus').notNullable();
+		//table.string('hrProfile').notNullable();
+		//').notNullable();
 		table.string('entryProgram').notNullable();
 		table.integer('projectYears').notNullable();
 		table.string('entryYearClass').notNullable();
@@ -47,8 +47,8 @@ export async function up(knex: Knex): Promise<void> {
 		table.string('standardizedSchool').notNullable();
 		table.string('groupedLocation').notNullable();
 		table.string('specificLocation').notNullable();
-		table.string('duplicatedTargetStatus').notNullable();
-		table.string('duplicatedCurrentStatus').notNullable();
+		//table.string('duplicatedTargetStatus').notNullable();
+		//table.string('duplicatedCurrentStatus').notNullable();
 		table.string('targetAudience').notNullable();
 
 		table.boolean('working').notNullable();
@@ -66,7 +66,7 @@ export async function up(knex: Knex): Promise<void> {
 		table.string('comments');
 		table.string('tag');
 
-		table.string('jan');
+		/*table.string('jan');
 		table.string('feb');
 		table.string('mar');
 		table.string('apr');
@@ -103,7 +103,7 @@ export async function up(knex: Knex): Promise<void> {
 		table.string('september2');
 		table.string('october2');
 		table.string('november2');
-		table.string('december2');
+		table.string('december2');*/
 
 		table.string('internshipUnavailabilityReason');
 		table.specificType('careerTrajectoryInterests', 'text[]');

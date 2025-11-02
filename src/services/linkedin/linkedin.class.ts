@@ -32,6 +32,18 @@ function parseDateForPostgres(value: string): string | null {
   return null; // se não conseguir converter
 }
 
+function filterIsmartAndBolsista(value: string | undefined): string | null {
+  if (!value) return null;
+
+  const str = String(value).toLowerCase();
+
+  if (str.includes('bolsista') || str.includes('ismart')) {
+    return null;
+  }
+
+  return value;
+}
+
 export class LinkedinService<ServiceParams extends Params = LinkedinParams> extends KnexService<
   Linkedin,
   LinkedinData,
@@ -113,8 +125,8 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
         // Atualiza dados do aluno na tabela students
         const resultStudentData = {
           working: !!current_company?.name,
-          organization: current_company?.name ?? null,
-          details: current_company?.title ?? null,
+          organization: filterIsmartAndBolsista(current_company?.name) ?? null,
+          details: filterIsmartAndBolsista(current_company?.title) ?? null,
           startDate: startDate,
           endDate: endDate,
         }
