@@ -91,7 +91,7 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
           startDate: item.experience?.[0]?.start_date ??
           item.experience?.positions?.[0]?.start_date ??
           '',
-          endtDate: item.experience?.[0]?.end_date ??
+          endDate: item.experience?.[0]?.end_date ??
           item.experience?.positions?.[0]?.end_date ??
           '',
 
