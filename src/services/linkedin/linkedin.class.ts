@@ -10,6 +10,28 @@ export type { Linkedin, LinkedinData, LinkedinPatch, LinkedinQuery }
 
 export interface LinkedinParams extends KnexAdapterParams<LinkedinQuery> {}
 
+function parseDateForPostgres(value: string): string | null {
+  if (!value) return null;
+
+  // Se for 'present' (maiúsculas ou minúsculas)
+  if (typeof value === 'string' && value.toLowerCase() === 'present') {
+    return new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
+  }
+
+  // Tenta converter formatos tipo 'Sep 2024', 'September 2024', etc.
+  const parsed = new Date(value);
+
+  if (!isNaN(parsed.getTime())) {
+    // Usa o primeiro dia do mês se não tiver dia definido
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = '01';
+    return `${year}-${month}-${day}`;
+  }
+
+  return null; // se não conseguir converter
+}
+
 export class LinkedinService<ServiceParams extends Params = LinkedinParams> extends KnexService<
   Linkedin,
   LinkedinData,
@@ -53,6 +75,13 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
           studentId: student.id,
         })
 
+        const startDate = parseDateForPostgres(item.experience?.[0]?.start_date ??
+          item.experience?.positions?.[0]?.start_date ??
+          '');
+        const endDate = parseDateForPostgres(item.experience?.[0]?.end_date ??
+          item.experience?.positions?.[0]?.end_date ??
+          '');
+
         // Monta dados para inserção/atualização na tabela linkedin
         const result = {
           studentId: student.id,
@@ -60,9 +89,8 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
           current_position: current_company?.title ?? '',
           timestamp: item.timestamp,
           data: JSON.stringify(item),
-          start_date: item.experience?.[0]?.start_date ??
-          item.experience?.positions?.[0]?.start_date ??
-          '',
+          start_date: startDate,
+          end_date: endDate,
           is_working: !!current_company?.name,
           createdAt
         }
@@ -88,13 +116,8 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
           working: !!current_company?.name,
           organization: current_company?.name ?? null,
           details: current_company?.title ?? null,
-          startDate: item.experience?.[0]?.start_date ??
-          item.experience?.positions?.[0]?.start_date ??
-          '',
-          endDate: item.experience?.[0]?.end_date ??
-          item.experience?.positions?.[0]?.end_date ??
-          '',
-
+          startDate: startDate,
+          endDate: endDate,
         }
 
         const resultStudent = await trx('students').update(resultStudentData).where('id', student.id)
