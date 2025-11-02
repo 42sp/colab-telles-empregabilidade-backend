@@ -11,6 +11,7 @@ export interface BrightDataProfile {
   current_company?: {
     name?: string
     location?: string | null
+    title?: string | null
   }
   city?: string
   country_code?: string
@@ -66,9 +67,9 @@ export function mapBrightDataToStudentUpdate(profile: BrightDataProfile) {
   const update: Record<string, any> = {}
 
   // 🔹 Profissional
-  if (profile.position) {
-    update.details = profile.position
-    logger.debug('[LinkedinMapper] Detected position', { position: profile.position })
+  if (profile.current_company?.title) {
+    update.details = profile.current_company?.title
+    logger.debug('[LinkedinMapper] Detected position', { position: profile.current_company?.title })
   }
 
   if (profile.current_company?.name) {

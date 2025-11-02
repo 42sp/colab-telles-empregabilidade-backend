@@ -33,17 +33,18 @@ const ENV = process.env.NODE_ENV || 'development'
 
 const allowedOrigins = [
   'https://colab-telles-empregabilidade-frontend.onrender.com',
-  'https://temp-empregabilidade-frontend.eorpdr.easypanel.host'
+  'https://temp-empregabilidade-frontend.eorpdr.easypanel.host',
+  'http://localhost:5174'
 ]
 
 // Permitir localhost em desenvolvimento
 if (ENV === 'development') {
-  allowedOrigins.push('http://localhost:5173')
+  allowedOrigins.push('http://localhost:5174')
 }
 
 const corsOptions = {
   origin: [
-    'http://localhost:5173',
+    'http://localhost:5174',
     'https://colab-telles-empregabilidade-frontend.onrender.com',
     'https://temp-empregabilidade-frontend.eorpdr.easypanel.host'
   ],
@@ -106,6 +107,6 @@ app.hooks({
 })
 
 // Inicia cron jobs
-setupScrapOperationsCron(app);
+//setupScrapOperationsCron(app);
 
 export { app }
