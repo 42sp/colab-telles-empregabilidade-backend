@@ -13,7 +13,7 @@ import { BadRequest } from '@feathersjs/errors'
 import { Knex } from 'knex'
 import { link } from 'fs'
 import { createStudentsObject } from './import-files.utils'
-import { logger } from 'logger'
+import { logger } from '../../logger'
 
 export type { ImportFiles, ImportFilesData, ImportFilesPatch, ImportFilesQuery }
 
