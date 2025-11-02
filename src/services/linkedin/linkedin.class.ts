@@ -29,7 +29,7 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
 
       const createdAt = new Date().toISOString()
 
-      for (const item of dataArray) {
+      for (const item of dataArray as any) {
         if (!item || !item.id) {
           logger.warn('[LinkedinService] Ignorando item sem id válido:', item)
           continue
@@ -60,7 +60,9 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
           current_position: current_company?.title ?? '',
           timestamp: item.timestamp,
           data: JSON.stringify(item),
-          start_date: '',
+          start_date: item.experience?.[0]?.start_date ??
+          item.experience?.positions?.[0]?.start_date ??
+          '',
           is_working: !!current_company?.name,
           createdAt
         }
@@ -85,6 +87,13 @@ export class LinkedinService<ServiceParams extends Params = LinkedinParams> exte
         const resultStudentData = {
           working: !!current_company?.name,
           organization: current_company?.name ?? null,
+          details: current_company?.title ?? null,
+          startDate: item.experience?.[0]?.start_date ??
+          item.experience?.positions?.[0]?.start_date ??
+          '',
+          endtDate: item.experience?.[0]?.end_date ??
+          item.experience?.positions?.[0]?.end_date ??
+          '',
 
         }
 
