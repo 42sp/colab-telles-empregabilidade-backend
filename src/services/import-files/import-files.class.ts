@@ -13,6 +13,7 @@ import { BadRequest } from '@feathersjs/errors'
 import { Knex } from 'knex'
 import { link } from 'fs'
 import { createStudentsObject } from './import-files.utils'
+import { logger } from 'logger'
 
 export type { ImportFiles, ImportFilesData, ImportFilesPatch, ImportFilesQuery }
 
@@ -212,7 +213,10 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 	}
 
 	async postLinkedIn(dbGeralData: any[], trx: Knex.Transaction, accessToken?: string) {
+		logger.info('[ImportFilesService] Posting LinkedIn data first step...');
 		const $service = useServices();
+
+		logger.info('[ImportFilesService] Posting LinkedIn data second step...');
 
 		const result = {
 			status: 'OK',
