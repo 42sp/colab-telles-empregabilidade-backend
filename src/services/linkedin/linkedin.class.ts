@@ -15,7 +15,7 @@ function parseDateForPostgres(value: string): string | null {
 
   // Se for 'present' (maiúsculas ou minúsculas)
   if (typeof value === 'string' && value.toLowerCase() === 'present') {
-    return new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
+    return null; // 'YYYY-MM-DD'
   }
 
   // Tenta converter formatos tipo 'Sep 2024', 'September 2024', etc.
