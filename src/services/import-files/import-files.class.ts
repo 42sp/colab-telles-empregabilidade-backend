@@ -12,7 +12,7 @@ import { useServices } from '../../hooks/useServices'
 import { BadRequest } from '@feathersjs/errors'
 import { Knex } from 'knex'
 import { link } from 'fs'
-import { createStudentsObject } from './import-files.utils'
+import { createStudentsObject, createStudentsObjectFromArray } from './import-files.utils'
 import { logger } from '../../logger'
 
 export type { ImportFiles, ImportFilesData, ImportFilesPatch, ImportFilesQuery }
@@ -84,7 +84,7 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 
 			console.log('Step 5: Posting LinkedIn data...');
 			result = await this.postLinkedIn(result.dbGeralData, trx, params?.authentication?.accessToken);
-			console.log('Step 5 completed - PostLinkedIn status:', result.status);
+			console.log('Step 5 completed - PostLinkedIn status:', result?.status);
 
 			if (result.status === 'OK') {
 				console.log('All steps completed successfully, committing transaction...');
@@ -266,27 +266,111 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 		try
 		{
 			const workbook = XLSX.read(file.buffer, { type: 'buffer' });
-			const sheetName = workbook.SheetNames.find(name => name.toLowerCase() === 'bd_geral');
+			console.log('Abas disponíveis no Excel:', workbook.SheetNames);
+
+			let sheetName = workbook.SheetNames.find(name =>
+				name.toLowerCase().replace(/\s+/g, '_') === 'bd_geral' ||
+				name.toLowerCase() === 'bd_geral' ||
+				name.toLowerCase() === 'bd geral'
+			);
+
+			// Se não encontrar BD_Geral, usa a primeira aba disponível
+			if (!sheetName && workbook.SheetNames.length > 0) {
+				sheetName = workbook.SheetNames[0];
+				console.log('Aba BD_Geral não encontrada, usando a primeira aba:', sheetName);
+			}
+
 			if (!sheetName) {
+				console.log('Nenhuma aba disponível no arquivo');
 				result.status = 'EMPTY';
-				result.message = 'Aba "bd_geral" não possui dados para importar.';
+				result.message = 'Nenhuma aba disponível no arquivo Excel';
 				return result;
 			}
 
+			console.log('Aba encontrada:', sheetName);
+
 			const sheet = workbook.Sheets[sheetName];
-			const rows = XLSX.utils.sheet_to_json(sheet, { range: 1 });
-			const headers = Object.keys(Object(rows[0]));
+			// Primeiro tenta ler todas as linhas incluindo possível header na linha 0
+			const allRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+			// Verifica se a primeira linha parece ser um header (tem "ID", "NOME", etc)
+			const firstRowKeys = allRows.length > 0 ? Object.keys(allRows[0] as any) : [];
+			const hasProperHeaders = firstRowKeys.includes('ID') || firstRowKeys.includes('NOME');
+
+			console.log('Primeira linha keys:', firstRowKeys.slice(0, 5));
+			console.log('Parece ter headers?', hasProperHeaders);
+
+			// Se não tem headers próprios, usa os dados da primeira linha como header
+			let rows;
+			if (!hasProperHeaders) {
+				// Lê como array para pegar os valores da primeira linha
+				const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+				const headerRow = rawRows[0] as any[];
+
+				console.log('Usando primeira linha como header:', headerRow.slice(0, 10));
+
+				// Agora lê de novo usando esses headers
+				rows = XLSX.utils.sheet_to_json(sheet, { range: 1, defval: '' });
+			} else {
+				rows = allRows;
+			}
+
+			if (!rows || rows.length === 0) {
+				console.log('Nenhuma linha encontrada na aba');
+				result.status = 'EMPTY';
+				result.message = 'Aba "BD_Geral" não possui linhas de dados.';
+				return result;
+			}
+
+			const firstRow = rows[0] as Record<string, any>;
+
+			console.log('=== HEADERS ENCONTRADOS ===');
+			console.log('Headers:', Object.keys(firstRow));
+			console.log('\n=== VERIFICANDO CAMPOS PRINCIPAIS ===');
+			console.log('ID:', firstRow['ID']);
+			console.log('NOME:', firstRow['NOME']);
+			console.log('Email_Ismart:', firstRow['Email_Ismart']);
+			console.log('LinkedIn:', firstRow['LinkedIn']);
+			console.log('Area_Atual:', firstRow['Area_Atual']);
+			console.log('Curso_Detalhado_Atual:', firstRow['Curso_Detalhado_Atual']);
+			console.log('Universidade_Detalhado_Atual:', firstRow['Universidade_Detalhado_Atual']);
+			console.log('Total de linhas:', rows.length);
+
 			const filteredRows = rows.filter((row: any) => {
 				if (!row || typeof row !== 'object') return false;
 				return Object.values(row).some(v => v !== null && v !== undefined && String(v).trim() !== '');
 			});
 
+			console.log('Linhas após filtro:', filteredRows.length);
+
 			let dbGeralData = filteredRows.map((row: any, index: number) => {
+				// Verifica se a linha é um array (sem headers) ou objeto (com headers)
+				const isArray = Array.isArray(row);
+				const studentData = isArray
+					? createStudentsObjectFromArray(this, row)
+					: createStudentsObject(this, row);
+
+				// Log apenas da primeira linha para debug
+				if (index === 0) {
+					console.log('\n=== DADOS MAPEADOS DA PRIMEIRA LINHA ===');
+					console.log('Tipo de row:', isArray ? 'Array' : 'Object');
+					console.log('Nome:', studentData.name);
+					console.log('LinkedIn:', studentData.linkedin);
+					console.log('Email:', studentData.ismartEmail);
+					console.log('Phone:', studentData.phoneNumber);
+					console.log('Curso:', studentData.currentDetailedCourse);
+					console.log('Universidade:', studentData.currentDetailedUniversity);
+					console.log('Área:', studentData.currentArea);
+					console.log('Cidade:', studentData.currentCity);
+					console.log('Estado:', studentData.currentState);
+				}
 				return {
-					...createStudentsObject(this, row),
+					...studentData,
 					importedFilesId: importedFilesId
 				}
 			});
+
+			console.log('\nTotal de estudantes mapeados:', dbGeralData.length);
 
 			if (!dbGeralData.length)
 				throw new BadRequest('Nenhuma linha válida encontrada para importação. Verifique o arquivo.');
@@ -302,15 +386,26 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 
 			// Insert novos estudantes
 			if (dataToInsert.length > 0) {
-				const insertResult = await trx('students').insert(dataToInsert).returning(['id']);
+				console.log('Inserindo estudantes:', dataToInsert.length);
+				console.log('Dados do primeiro estudante a inserir:', JSON.stringify(dataToInsert[0], null, 2));
 
-				if (!insertResult) {
-					throw new Error('Erro ao inserir dados de students.');
+				try {
+					const insertResult = await trx('students').insert(dataToInsert).returning(['id']);
+
+					if (!insertResult) {
+						throw new Error('Erro ao inserir dados de students.');
+					}
+
+					insertResult.forEach((r: any) => {
+						result.studentsId.push(Number(r.id));
+					});
+
+					console.log('Estudantes inseridos com sucesso:', insertResult.length);
+				} catch (insertError: any) {
+					console.error('Erro ao inserir estudantes:', insertError.message);
+					console.error('SQL:', insertError.sql);
+					throw insertError;
 				}
-
-				insertResult.forEach((r: any) => {
-					result.studentsId.push(Number(r.id));
-				});
 			}
 
 			// Update estudantes existentes

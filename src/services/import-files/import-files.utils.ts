@@ -1,15 +1,149 @@
 import { importFiles, ImportFilesService } from "./import-files"
 
+export const createStudentsObjectFromArray = (importFilesService: ImportFilesService, rowArray: any[]) => {
+	// Mapeia dados quando o Excel vem como array (sem headers)
+	const obj = {
+		// Personal Data
+		xls_id: importFilesService.toInt(rowArray[2]) ?? undefined, // Coluna 2: ID
+		name: importFilesService.s(rowArray[3]) || 'Sem nome', // Coluna 3: Nome
+		socialName: importFilesService.s(rowArray[4]) ?? undefined,
+		preferredName: importFilesService.s(rowArray[5]) ?? undefined, // Coluna 5: Apelido
+		ismartEmail: importFilesService.s(rowArray[6]) || '', // Coluna 6: Email
+		phoneNumber: importFilesService.s(rowArray[7]) || '', // Coluna 7: Telefone
+		gender: importFilesService.s(rowArray[8]) || '', // Coluna 8: Gênero
+		sexualOrientation: importFilesService.s(rowArray[9]) ?? undefined, // Coluna 9: Orientação
+		raceEthnicity: importFilesService.s(rowArray[10]) ?? undefined, // Coluna 10: Raça
+		hasDisability: importFilesService.toBool(rowArray[11]) ?? undefined, // Coluna 11: PCD
+		linkedin: importFilesService.normalizeLinkedinUrl(importFilesService.s(rowArray[12])) ?? undefined, // Coluna 12: LinkedIn
+
+		// Academic Data
+		transferredCourseOrUniversity: importFilesService.toBool(rowArray[13]) ?? undefined, // Coluna 13: Transferência
+		transferDate: undefined,
+		currentCourseStart: undefined,
+		currentCourseStartYear: importFilesService.toInt(rowArray[0]) ?? undefined, // Coluna 0: Ano início
+		currentCourseEnd: undefined,
+		currentCourseEndYear: importFilesService.toInt(rowArray[1]) ?? undefined, // Coluna 1: Ano fim
+		supportedCourseFormula: '',
+		currentArea: importFilesService.s(rowArray[14]) || '', // Coluna 14: Área
+		universityType: importFilesService.s(rowArray[15]) || '', // Coluna 15: Tipo Universidade
+		currentAggregatedCourse: importFilesService.s(rowArray[16]) || '', // Coluna 16: Curso Agregado
+		currentDetailedCourse: importFilesService.s(rowArray[17]) || '', // Coluna 17: Curso Detalhado
+		currentDetailedUniversity: importFilesService.s(rowArray[18]) || '', // Coluna 18: Universidade
+		currentCity: importFilesService.s(rowArray[19]) || '', // Coluna 19: Cidade
+		currentState: importFilesService.s(rowArray[20]) || '', // Coluna 20: Estado
+		currentCountry: importFilesService.s(rowArray[21]) || '', // Coluna 21: País
+		currentAggregatedLocation: importFilesService.s(rowArray[22]) || '', // Coluna 22: Local Agregado
+		currentShift: importFilesService.s(rowArray[23]) || '', // Coluna 23: Turno
+
+		// Status and Profile
+		holderContractStatus: '',
+		realStatus: importFilesService.s(rowArray[24]) || '', // Coluna 24: Status real
+		realProfile: importFilesService.s(rowArray[25]) || '', // Coluna 25: Perfil real
+		hrProfile: '',
+		targetStatus: importFilesService.s(rowArray[26]) || '', // Coluna 26: Status Meta
+		entryProgram: '',
+		projectYears: 0,
+		entryYearClass: '',
+		schoolNetwork: '',
+		school: '',
+		standardizedSchool: '',
+		groupedLocation: '',
+		specificLocation: '',
+		duplicatedTargetStatus: '',
+		duplicatedCurrentStatus: '',
+		targetAudience: importFilesService.s(rowArray[27]) || '', // Coluna 27: Público
+
+		// Work and Opportunities
+		working: importFilesService.toBool(rowArray[39]) ?? false, // Coluna 39: Trabalhando
+		opportunityType: undefined,
+		details: undefined,
+		sector: undefined,
+		careerTrack: undefined,
+		organization: undefined,
+		website: undefined,
+		startDate: undefined,
+		endDate: undefined,
+		compensation: undefined,
+		partnerCompanies: undefined,
+		topGlobalCompanies: undefined,
+		comments: undefined,
+		tag: undefined,
+
+		// Months - todos undefined por enquanto
+		jan: undefined,
+		feb: undefined,
+		mar: undefined,
+		apr: undefined,
+		may: undefined,
+		jun: undefined,
+		jul: undefined,
+		aug: undefined,
+		sep: undefined,
+		oct: undefined,
+		nov: undefined,
+		dec: undefined,
+
+		january: undefined,
+		february: undefined,
+		march: undefined,
+		april: undefined,
+		mayFull: undefined,
+		june: undefined,
+		july: undefined,
+		august: undefined,
+		september: undefined,
+		october: undefined,
+		november: undefined,
+		december: undefined,
+
+		january2: undefined,
+		february2: undefined,
+		march2: undefined,
+		april2: undefined,
+		may2: undefined,
+		june2: undefined,
+		july2: undefined,
+		august2: undefined,
+		september2: undefined,
+		october2: undefined,
+		november2: undefined,
+		december2: undefined,
+
+		// Career Questionnaire
+		internshipUnavailabilityReason: undefined,
+		careerTrajectoryInterests: undefined,
+		primaryInterest: undefined,
+		secondaryInterest: undefined,
+		intendedWorkingAreas: undefined,
+		additionalAreaInterests: undefined,
+		seekingProfessionalOpportunity: undefined,
+		opportunitiesLookingFor: undefined,
+		opportunityDetails: undefined,
+
+		// Skills
+		languages: undefined,
+		technicalKnowledge: undefined,
+		officePackageKnowledge: undefined,
+		wordProficiencyLevel: undefined,
+		excelProficiencyLevel: undefined,
+		powerPointProficiencyLevel: undefined,
+
+		createdAt: new Date().toISOString()
+	};
+
+	return obj;
+}
+
 export const createStudentsObject = (importFilesService: ImportFilesService, row: any) => {
 	const obj = {
 		// Personal Data
-		xls_id: importFilesService.s(row["ID"]),
-		name: importFilesService.s(row["NOME"]),
+		xls_id: importFilesService.toInt(row["ID"]) ?? undefined,
+		name: importFilesService.s(row["NOME"]) || 'Sem nome',
 		socialName: importFilesService.s(row["Nome_social"]) ?? undefined,
 		preferredName: importFilesService.s(row["Como_gostaria_de_ser_chamado"]) ?? undefined,
-		ismartEmail: importFilesService.s(row["Email_Ismart"]),
-		phoneNumber: importFilesService.s(row["Celular"]),
-		gender: importFilesService.s(row["Gênero"]),
+		ismartEmail: importFilesService.s(row["Email_Ismart"]) || '',
+		phoneNumber: importFilesService.s(row["Celular"]) || '',
+		gender: importFilesService.s(row["Gênero"]) || '',
 		sexualOrientation: importFilesService.s(row["Orientação Sexual"]) ?? undefined,
 		raceEthnicity: importFilesService.s(row["Cor_raça"]) ?? undefined,
 		hasDisability: importFilesService.toBool(row["PCD?"]) ?? undefined,
@@ -22,35 +156,35 @@ export const createStudentsObject = (importFilesService: ImportFilesService, row
 		currentCourseStartYear: importFilesService.toInt(row["Ano_Inicio_Curso_Atual"]) ?? undefined,
 		currentCourseEnd: importFilesService.toDateStr(row["Termino_Curso_Atual"]) ?? undefined,
 		currentCourseEndYear: importFilesService.toInt(row["Ano_Termino_Curso_Atual"]) ?? undefined,
-		supportedCourseFormula: importFilesService.s(row["Curso_Apoiado_Fórmula"]),
-		currentArea: importFilesService.s(row["Area_Atual"]),
-		universityType: importFilesService.s(row["Tipo_Universidade"]),
-		currentAggregatedCourse: importFilesService.s(row["Curso_Agregado_Atual"]),
-		currentDetailedCourse: importFilesService.s(row["Curso_Detalhado_Atual"]),
-		currentDetailedUniversity: importFilesService.s(row["Universidade_Detalhado_Atual"]),
-		currentCity: importFilesService.s(row["Cidade_Atual"]),
-		currentState: importFilesService.s(row["Estado_Atual"]),
-		currentCountry: importFilesService.s(row["Pais_Atual"]),
-		currentAggregatedLocation: importFilesService.s(row["Local_Agregado_Atual"]),
-		currentShift: importFilesService.s(row["Turno_atual"]),
+		supportedCourseFormula: importFilesService.s(row["Curso_Apoiado_Fórmula"]) || '',
+		currentArea: importFilesService.s(row["Area_Atual"]) || '',
+		universityType: importFilesService.s(row["Tipo_Universidade"]) || '',
+		currentAggregatedCourse: importFilesService.s(row["Curso_Agregado_Atual"]) || '',
+		currentDetailedCourse: importFilesService.s(row["Curso_Detalhado_Atual"]) || '',
+		currentDetailedUniversity: importFilesService.s(row["Universidade_Detalhado_Atual"]) || '',
+		currentCity: importFilesService.s(row["Cidade_Atual"]) || '',
+		currentState: importFilesService.s(row["Estado_Atual"]) || '',
+		currentCountry: importFilesService.s(row["Pais_Atual"]) || '',
+		currentAggregatedLocation: importFilesService.s(row["Local_Agregado_Atual"]) || '',
+		currentShift: importFilesService.s(row["Turno_atual"]) || '',
 
 		// Status and Profile
 		holderContractStatus: importFilesService.s(row["Status_Contrato_Titular"]),
 		realStatus: importFilesService.s(row["Status_real"]),
-		realProfile: importFilesService.s(row["Perfil_real"]),
+		realProfile: importFilesService.s(row["Perfil_real"]) || '',
 		hrProfile: importFilesService.s(row["Perfil_RR"]),
 		targetStatus: importFilesService.s(row["Status_Meta"]),
-		entryProgram: importFilesService.s(row["Programa_Entrada"]),
+		entryProgram: importFilesService.s(row["Programa_Entrada"]) || '',
 		projectYears: importFilesService.toInt(row["Anos_de_Projeto"]) ?? 0,
-		entryYearClass: importFilesService.s(row["Turma_Ano_de_Entrada_"]),
-		schoolNetwork: importFilesService.s(row["Rede_Escola"]),
-		school: importFilesService.s(row["Colegio"]),
-		standardizedSchool: importFilesService.s(row["Colegio_Padronizado"]),
-		groupedLocation: importFilesService.s(row["Praça_Agrupado"]),
-		specificLocation: importFilesService.s(row["Praça_Especifico"]),
+		entryYearClass: importFilesService.s(row["Turma_Ano_de_Entrada_"]) || '',
+		schoolNetwork: importFilesService.s(row["Rede_Escola"]) || '',
+		school: importFilesService.s(row["Colegio"]) || '',
+		standardizedSchool: importFilesService.s(row["Colegio_Padronizado"]) || '',
+		groupedLocation: importFilesService.s(row["Praça_Agrupado"]) || '',
+		specificLocation: importFilesService.s(row["Praça_Especifico"]) || '',
 		duplicatedTargetStatus: importFilesService.s(row["Status Meta"]),
 		duplicatedCurrentStatus: importFilesService.s(row["Status Atual"]),
-		targetAudience: importFilesService.s(row["Público Meta"]),
+		targetAudience: importFilesService.s(row["Público Meta"]) || '',
 
 		// Work and Opportunities
 		working: importFilesService.toBool(row["Trabalhando"]) ?? false,
@@ -65,6 +199,8 @@ export const createStudentsObject = (importFilesService: ImportFilesService, row
 		compensation: importFilesService.toNumber(row["Remuneração"]) ?? undefined,
 		partnerCompanies: importFilesService.toBool(row["Empresas_parceiras"]) ?? undefined,
 		topGlobalCompanies: importFilesService.toBool(row["Top_Global_Empresas"]) ?? undefined,
+		telles_foundation: importFilesService.toBool(row["Telles Foundation"]) ?? undefined,
+		ismart: importFilesService.toBool(row["Ismart"]) ?? undefined,
 		comments: importFilesService.s(row["Comentários"]) ?? undefined,
 		tag: importFilesService.s(row["Tag"]) ?? undefined,
 
