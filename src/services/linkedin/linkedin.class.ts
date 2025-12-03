@@ -181,6 +181,11 @@ export class LinkedinDashboardService<ServiceParams extends Params = LinkedinPar
       .select(this.Model.raw(`"currentArea" as name`), this.Model.raw('COUNT(id) as value'))
       .groupBy('currentArea')
       .orderBy('value', 'desc')
+    const organizationDistributionRaw: { name: string; value: string }[] = await this.Model('students')
+      .select(this.Model.raw('organization as name'), this.Model.raw('COUNT(id) as value'))
+      .whereNotNull('organization')
+      .groupBy('organization')
+      .orderBy('value', 'desc')
     const lastSynchronization: any = await this.Model('linkedin').max('createdAt as last_sync').first()
 
     let itemsAddedLastSync = 0
@@ -282,6 +287,10 @@ export class LinkedinDashboardService<ServiceParams extends Params = LinkedinPar
           : ''
       })),
       sectorDistribution: sectorDistributionRaw.map(item => ({
+        name: item.name ? item.name : 'Não Consta',
+        value: Number(item.value)
+      })),
+      organizationDistribution: organizationDistributionRaw.map(item => ({
         name: item.name ? item.name : 'Não Consta',
         value: Number(item.value)
       })),
