@@ -291,22 +291,38 @@ export class ImportFilesService<ServiceParams extends Params = ImportFilesParams
 			if (!dbGeralData.length)
 				throw new BadRequest('Nenhuma linha válida encontrada para importação. Verifique o arquivo.');
 
-			const existing = await this.Model('students')
+			const existing = await trx('students')
 				.whereIn('linkedin', dbGeralData.map(d => d.linkedin))
-				.whereIn('xls_id', dbGeralData.map(d => d.xls_id))
 				.select('linkedin', 'id');
 
-			dbGeralData = dbGeralData.filter(f => existing.findIndex(fi => fi.linkedin === f.linkedin) === -1);
+			const existingMap = new Map(existing.map(e => [e.linkedin, e.id]));
 
-			const insertResult = await trx('students').insert(dbGeralData).returning(['id']);
+			const dataToInsert = dbGeralData.filter(d => !existingMap.has(d.linkedin));
+			const dataToUpdate = dbGeralData.filter(d => existingMap.has(d.linkedin));
 
-			if (!insertResult) {
-				throw new Error('Erro ao inserir dados de students.');
+			// Insert novos estudantes
+			if (dataToInsert.length > 0) {
+				const insertResult = await trx('students').insert(dataToInsert).returning(['id']);
+
+				if (!insertResult) {
+					throw new Error('Erro ao inserir dados de students.');
+				}
+
+				insertResult.forEach((r: any) => {
+					result.studentsId.push(Number(r.id));
+				});
 			}
 
-			const studentsId : number | null = Number(insertResult[0].id) ?? null;
+			// Update estudantes existentes
+			for (const student of dataToUpdate) {
+				const studentId = existingMap.get(student.linkedin);
+				if (studentId) {
+					const { linkedin, ...updateData } = student;
+					await trx('students').where('id', studentId).update(updateData);
+					result.studentsId.push(studentId);
+				}
+			}
 
-			result.studentsId.push(studentsId);
 			result.dbGeralData = dbGeralData;
 		}
 		catch (err: any)
