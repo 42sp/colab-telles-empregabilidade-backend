@@ -169,14 +169,12 @@ export class LinkedinDashboardService<ServiceParams extends Params = LinkedinPar
       .where('working', true)
       .count('id', { as: 'total' })
       .first()
-    const employmentByMonth: any = await this.Model('students')
-      .select(
-        this.Model.raw(`DATE_TRUNC('month', "createdAt") as month`),
-        this.Model.raw(`SUM(CASE WHEN working THEN 1 ELSE 0 END) as trabalhando`),
-        this.Model.raw(`SUM(CASE WHEN working THEN 0 ELSE 1 END) as sem_trabalho`)
-      )
-      .groupByRaw(`DATE_TRUNC('month', "createdAt")`)
-      .orderBy('month', 'asc')
+    const universityDistributionRaw: { name: string; value: string }[] = await this.Model('students')
+      .select(this.Model.raw('"currentDetailedUniversity" as name'), this.Model.raw('COUNT(id) as value'))
+      .whereNotNull('currentDetailedUniversity')
+      .where('currentDetailedUniversity', '!=', '')
+      .groupBy('currentDetailedUniversity')
+      .orderBy('value', 'desc')
     const sectorDistributionRaw: { name: string; value: string }[] = await this.Model('students')
       .select(this.Model.raw(`"currentArea" as name`), this.Model.raw('COUNT(id) as value'))
       .groupBy('currentArea')
@@ -184,8 +182,24 @@ export class LinkedinDashboardService<ServiceParams extends Params = LinkedinPar
     const organizationDistributionRaw: { name: string; value: string }[] = await this.Model('students')
       .select(this.Model.raw('organization as name'), this.Model.raw('COUNT(id) as value'))
       .whereNotNull('organization')
+      .where('organization', '!=', '')
       .groupBy('organization')
       .orderBy('value', 'desc')
+
+    const stateDistributionRaw: { name: string; value: string }[] = await this.Model('students')
+      .select(this.Model.raw('"currentState" as name'), this.Model.raw('COUNT(id) as value'))
+      .whereNotNull('currentState')
+      .where('currentState', '!=', '')
+      .groupBy('currentState')
+      .orderBy('value', 'desc')
+
+    const cityDistributionRaw: { name: string; value: string }[] = await this.Model('students')
+      .select(this.Model.raw('"currentCity" as name'), this.Model.raw('COUNT(id) as value'))
+      .whereNotNull('currentCity')
+      .where('currentCity', '!=', '')
+      .groupBy('currentCity')
+      .orderBy('value', 'desc')
+
     const lastSynchronization: any = await this.Model('linkedin').max('createdAt as last_sync').first()
 
     let itemsAddedLastSync = 0
@@ -280,18 +294,24 @@ export class LinkedinDashboardService<ServiceParams extends Params = LinkedinPar
 
     return {
       metrics,
-      employmentByMonth: employmentByMonth.map((item: any) => ({
-        ...item,
-        month: item.month
-          ? new Date(item.month).toLocaleString('en-US', { month: 'short' }).replace('.', '')
-          : ''
+      universityDistribution: universityDistributionRaw.map(item => ({
+        name: item.name || 'Não Consta',
+        value: Number(item.value)
       })),
       sectorDistribution: sectorDistributionRaw.map(item => ({
         name: item.name ? item.name : 'Não Consta',
         value: Number(item.value)
       })),
       organizationDistribution: organizationDistributionRaw.map(item => ({
-        name: item.name ? item.name : 'Não Consta',
+        name: item.name || 'Não Consta',
+        value: Number(item.value)
+      })),
+      stateDistribution: stateDistributionRaw.map(item => ({
+        name: item.name || 'Não Consta',
+        value: Number(item.value)
+      })),
+      cityDistribution: cityDistributionRaw.map(item => ({
+        name: item.name || 'Não Consta',
         value: Number(item.value)
       })),
       statusSync: {
